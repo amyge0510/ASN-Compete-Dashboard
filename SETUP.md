@@ -16,7 +16,7 @@ if someone has already turned on the automatic runs.
 If the automatic weekly runs are switched on, you don't install anything:
 
 1. Bookmark the dashboard:
-   **https://neoapollo18.github.io/compete-dashboard/**
+   **https://amyge0510.github.io/ASN-Compete-Dashboard/**
 2. Open it whenever you want. It updates itself every Monday, and the
    "Refresh data" button in the top-right runs a fresh check on demand
    (you need to be added as a collaborator on the GitHub project for the
