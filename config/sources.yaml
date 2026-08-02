@@ -1,0 +1,199 @@
+# Competitor sources to monitor.
+#
+# Source types:
+#   rss                   — blog/announcement feeds (AWS posts certification news here, etc.)
+#   course_catalog        — pages listing a competitor's course inventory; the pipeline
+#                           snapshots the list each run and diffs against the last snapshot.
+#                           Set `render: true` for JavaScript-rendered catalogs (needs
+#                           Playwright: pip install playwright && playwright install chromium).
+#   sitemap               — XML sitemaps whose URL set IS the catalog (OpenAI Academy,
+#                           Trailhead). Optional `url_filter` keeps only matching paths.
+#   google_skills_catalog — skills.google's paginated catalog (server-rendered JSON).
+#   skillbuilder_catalog  — AWS Skill Builder's public GraphQL search backend.
+#
+# All URLs below were verified live on 2026-07-28. After editing, re-verify:
+#   python -m scraper check-sources
+
+sources:
+  # ── AWS ────────────────────────────────────────────────────────────────
+  - name: aws-training-blog
+    type: rss
+    url: https://aws.amazon.com/blogs/training-and-certification/feed/
+    competitor: AWS
+    notes: >
+      Dedicated AWS Training & Certification blog feed. Also announces Skill
+      Builder feature launches, so it doubles as Skill Builder coverage.
+
+  - name: aws-skill-builder-catalog
+    type: skillbuilder_catalog
+    url: https://skillbuilder.aws/graphql   # informational — module knows the endpoint
+    competitor: AWS
+    notes: >
+      Migrated from explore.skillbuilder.aws. The SPA is an empty React shell,
+      but its search backend (public GraphQL searchV2) serves the full ~2,250
+      item catalog anonymously — no Playwright needed. First run must seed
+      with --no-analyze. If the schema drifts, check-sources reports it and
+      the aws-training-blog feed still covers announcements.
+
+  # ── Google ─────────────────────────────────────────────────────────────
+  - name: google-cloud-training-blog
+    type: rss
+    url: https://cloudblog.withgoogle.com/topics/training-certifications/rss/
+    competitor: Google
+    notes: >
+      Feed moved from /products/... to /topics/... in the blog re-org. Still
+      carries Google Skills announcements after the 2025 skills.google
+      consolidation.
+
+  - name: google-skills-catalog
+    type: google_skills_catalog
+    url: https://www.skills.google/catalog
+    competitor: Google
+    notes: >
+      cloudskillsboost.google now redirects here — same Qwiklabs platform.
+      Catalog is server-rendered with embedded JSON (title/path/duration/
+      level/credentialType); paginated via ?page=N.
+
+  # Grow with Google has an advertised RSS feed but it is empty (0 items,
+  # verified 2026-07-28); coverage comes from the discovery layer below.
+
+  # ── Anthropic ──────────────────────────────────────────────────────────
+  - name: anthropic-courses
+    type: course_catalog
+    url: https://claude.com/resources/courses
+    competitor: Anthropic
+    item_selector: "a[href*='anthropic.skilljar.com']"
+    notes: >
+      Server-rendered index of Anthropic Academy courses; each card links to
+      the Skilljar-hosted course (anthropic.skilljar.com). Partner certs live
+      at anthropic-partners.skilljar.com (covered via discovery).
+
+  # ── OpenAI ─────────────────────────────────────────────────────────────
+  - name: openai-news
+    type: rss
+    url: https://openai.com/news/rss.xml
+    competitor: OpenAI
+    notes: >
+      Full archive feed (1,000+ items — first run must seed with
+      --no-analyze). The HTML site Cloudflare-blocks bots; the feed is the
+      sanctioned channel.
+
+  - name: openai-academy-catalog
+    type: sitemap
+    url: https://academy.openai.com/sitemap/content/sitemap.xml
+    competitor: OpenAI
+    notes: >
+      Academy runs on the Gradual platform; the content sitemap (~220 URLs)
+      covers courses, collections, videos, and blogs under /public/.
+
+  # ── Salesforce ─────────────────────────────────────────────────────────
+  - name: salesforce-blog
+    type: rss
+    url: https://www.salesforce.com/blog/feed/
+    competitor: Salesforce Trailhead
+    notes: >
+      The old /blog/category/learning/ feed no longer exists — this is the
+      main blog feed; the analysis layer drops non-learning items rather
+      than force-fitting them.
+
+  - name: trailhead-catalog
+    type: sitemap
+    url: https://trailhead.salesforce.com/content_sitemap.xml
+    competitor: Salesforce Trailhead
+    url_filter: /content/learn/
+    notes: >
+      ~8,600 module/trail URLs with lastmod dates — the best catalog surface
+      of any competitor. ~18 MB download, hence the raised sitemap size cap.
+      First run must seed with --no-analyze.
+
+# Competitor priority tiers — drive the analyst's significance calibration
+# and the canonical names every insight must use (variants like "OpenAI
+# Academy" or "Google Cloud Skills Boost" are mapped onto these).
+competitors:
+  high_priority:        # direct compete targets: bar for "high" is lower
+    - Salesforce Trailhead
+    - AWS
+    - Google
+  medium_priority:      # watch closely, but reserve "high" for major moves
+    - Anthropic
+    - OpenAI
+    - Coursera
+    - Udemy
+    - LinkedIn Learning
+    - ServiceNow University
+
+# Search-based discovery: for updates posted outside the configured feeds.
+# Each target runs a web search (via Claude's server-side web_search tool),
+# surfaces the ~5 most relevant results with summaries, and feeds them through
+# the same dedup as everything else.
+discovery:
+  enabled: true
+  lookback_days: 45
+  results_per_target: 8       # articles surfaced per target per run
+  max_searches: 8             # web-search calls the model may spend per target
+  # Syndication mirrors — the model is told to find the original article
+  # instead; anything still pointing here is dropped:
+  blocked_domains:
+    - aol.com
+    - msn.com
+    - news.yahoo.com
+    - finance.yahoo.com
+  targets:
+    - competitor: AWS
+      query: AWS Skill Builder OR AWS Training and Certification new courses certifications product updates
+    - competitor: Google
+      query: Google Skills OR Google Cloud Skills Boost OR Grow with Google new courses certifications platform updates
+    - competitor: Salesforce Trailhead
+      query: Salesforce Trailhead new modules certifications platform updates
+    - competitor: Anthropic
+      query: Anthropic Academy new courses OR Anthropic partner certification program updates
+    - competitor: OpenAI
+      query: OpenAI Academy new courses learning programs certifications updates
+    - competitor: ServiceNow University
+      query: ServiceNow University new courses certifications learning platform updates
+    - competitor: Industry
+      query: >
+        AI skills training certification market news — Coursera, Udemy,
+        LinkedIn Learning, Pluralsight, enterprise AI upskilling programs,
+        certification partnerships
+
+# Reddit social listening: what practitioners say about competitor learning
+# platforms, independent of what the competitors publish themselves. Each
+# subreddit is searched for every keyword below (combined into one query);
+# a matched post is tagged with the competitor of whichever keyword it
+# actually contains. Needs a registered Reddit "script" app — see
+# scraper/sources/reddit.py for the env vars and setup link.
+reddit:
+  enabled: true
+  time_filter: month          # hour | day | week | month | year | all
+  limit_per_subreddit: 25
+  subreddits:
+    - AWSCertifications
+    - aws
+    - googlecloud
+    - salesforce
+    - OpenAI
+    - ClaudeAI
+    - csMajors
+    - cscareerquestions
+  keywords:
+    - term: skill builder
+      competitor: AWS
+    - term: aws certification
+      competitor: AWS
+    - term: skills boost
+      competitor: Google
+    - term: google skills
+      competitor: Google
+    - term: google cloud certification
+      competitor: Google
+    - term: trailhead
+      competitor: Salesforce Trailhead
+    - term: salesforce certification
+      competitor: Salesforce Trailhead
+    - term: openai academy
+      competitor: OpenAI
+    - term: anthropic certification
+      competitor: Anthropic
+    - term: claude certification
+      competitor: Anthropic
