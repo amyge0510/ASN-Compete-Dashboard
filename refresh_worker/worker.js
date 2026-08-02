@@ -26,9 +26,9 @@
  */
 
 const DEFAULTS = {
-  ALLOWED_ORIGIN: "https://neoapollo18.github.io",
-  OWNER: "neoapollo18",
-  REPO: "microsoft-web-scraper",
+  ALLOWED_ORIGIN: "https://amyge0510.github.io",
+  OWNER: "amyge0510",
+  REPO: "ASN-Compete-Dashboard",
   WORKFLOW: "monitor.yml",
   COOLDOWN_MINUTES: "15",
 };
