@@ -96,8 +96,7 @@ export REDDIT_USER_AGENT="compete-monitor/1.0 by u/yourname"
 - **Fully hosted (zero-touch):** `.github/workflows/monitor.yml` runs the
   monitor every Monday in GitHub Actions and publishes the site to GitHub
   Pages — viewers just bookmark the Pages URL. Setup steps are in the
-  workflow file's header comment (push repo, add the `ANTHROPIC_API_KEY`
-  secret, enable Pages).
+  workflow file's header comment
 
 **Command line:**
 
