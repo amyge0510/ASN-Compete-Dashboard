@@ -1,0 +1,131 @@
+# Fully-hosted mode: runs the monitor weekly in the cloud and publishes the
+# dashboard to GitHub Pages — nobody has to run anything, the bookmarked
+# Pages URL is always current.
+#
+# One-time setup (technical person, ~5 minutes):
+#   1. Push this repo to GitHub.
+#   2. Repo Settings → Secrets and variables → Actions → New repository
+#      secret: ANTHROPIC_API_KEY.
+#   3. Repo Settings → Pages → Source: "GitHub Actions".
+#   4. (Optional) Actions tab → this workflow → "Run workflow" for a first run.
+#
+# The knowledge base is carried between runs via the Actions cache; if the
+# cache ever expires the run re-seeds automatically (baseline changes are
+# suppressed on the site, so this is invisible to viewers).
+
+name: competitor-monitor
+
+on:
+  schedule:
+    - cron: "0 13 * * 1"   # Mondays 13:00 UTC (~6am PT / 9am ET)
+  workflow_dispatch:        # manual "Run workflow" button
+    inputs:
+      mode:
+        description: "monitor (normal) or backfill (one-time history load)"
+        default: monitor
+        type: choice
+        options: [monitor, backfill]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Restore/save are split (not the combined actions/cache) so a FAILED
+      # run never uploads its partially-written DB as next week's baseline.
+      - name: Restore knowledge base
+        uses: actions/cache/restore@v4
+        with:
+          path: knowledge_base.db
+          key: knowledge-base-${{ github.run_id }}
+          restore-keys: knowledge-base-
+
+      - name: Seed on first run (empty knowledge base)
+        run: |
+          if [ ! -f knowledge_base.db ]; then
+            python -m scraper --no-analyze --no-discovery --no-reddit
+          fi
+
+      - name: Preflight OpenAI connectivity
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "models endpoint: $(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            https://api.openai.com/v1/models)"
+          python - <<'EOF'
+          import os
+          from openai import OpenAI
+          try:
+              r = OpenAI().responses.create(model="gpt-5", input="Say OK.",
+                                            max_output_tokens=16)
+              print("responses API: OK")
+          except Exception as e:
+              print("responses API FAILED:", repr(e))
+              print("cause:", repr(getattr(e, "__cause__", None)))
+          EOF
+
+      - name: Run monitor
+        env:
+          # Set whichever provider's secret exists; llm.py auto-detects.
+          # For Microsoft/Azure OpenAI credits: OPENAI_API_KEY +
+          # OPENAI_BASE_URL (the resource's OpenAI-compatible /v1 endpoint)
+          # + LLM_PROVIDER=openai as repository variables/secrets.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+          # Gives every dashboard page a "Refresh data" button that opens
+          # the workflow's Run-workflow page for collaborators.
+          REFRESH_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/monitor.yml
+          # Set the REFRESH_HOOK_URL repo variable to the Cloudflare Worker
+          # URL (refresh-worker/worker.js) to upgrade the button to in-page
+          # refresh with no GitHub exposure.
+          REFRESH_HOOK_URL: ${{ vars.REFRESH_HOOK_URL }}
+        run: |
+          if [ "${{ inputs.mode }}" = "backfill" ]; then
+            python -m scraper backfill --days 45
+          else
+            python -m scraper --no-reddit
+          fi
+
+      - name: Save knowledge base
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: knowledge_base.db
+          key: knowledge-base-${{ github.run_id }}
+
+      # The dashboard is served from the public compete-dashboard repo
+      # (GitHub Pages); the source repo stays private. DASHBOARD_TOKEN is a
+      # fine-grained PAT with contents:write on that one repo.
+      - name: Publish dashboard
+        env:
+          DASHBOARD_TOKEN: ${{ secrets.DASHBOARD_TOKEN }}
+        run: |
+          cd site
+          git init -b main
+          git config user.name "compete-monitor"
+          git config user.email "actions@users.noreply.github.com"
+          touch .nojekyll
+          git add -A
+          git commit -m "Dashboard update $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push --force \
+            "https://x-access-token:${DASHBOARD_TOKEN}@github.com/neoapollo18/compete-dashboard.git" main
