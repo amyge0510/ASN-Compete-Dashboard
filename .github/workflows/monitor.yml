@@ -5,8 +5,8 @@
 # One-time setup (technical person, ~5 minutes):
 #   1. Push this repo to GitHub.
 #   2. Repo Settings → Secrets and variables → Actions → New repository
-#      secret: ANTHROPIC_API_KEY.
-#   3. Repo Settings → Pages → Source: "GitHub Actions".
+#      secret: OPENAI_API_KEY (or ANTHROPIC_API_KEY).
+#   3. Repo Settings → Pages → Source: "Deploy from a branch", branch gh-pages.
 #   4. (Optional) Actions tab → this workflow → "Run workflow" for a first run.
 #
 # The knowledge base is carried between runs via the Actions cache; if the
@@ -27,7 +27,7 @@ on:
         options: [monitor, backfill]
 
 permissions:
-  contents: read
+  contents: write   # push the generated dashboard to the gh-pages branch
 
 concurrency:
   group: monitor
@@ -113,19 +113,16 @@ jobs:
           path: knowledge_base.db
           key: knowledge-base-${{ github.run_id }}
 
-      # The dashboard is served from the public compete-dashboard repo
-      # (GitHub Pages); the source repo stays private. DASHBOARD_TOKEN is a
-      # fine-grained PAT with contents:write on that one repo.
+      # The dashboard is served from this repo's gh-pages branch via
+      # GitHub Pages, pushed with the workflow's own GITHUB_TOKEN.
       - name: Publish dashboard
-        env:
-          DASHBOARD_TOKEN: ${{ secrets.DASHBOARD_TOKEN }}
         run: |
           cd site
-          git init -b main
+          git init -b gh-pages
           git config user.name "compete-monitor"
           git config user.email "actions@users.noreply.github.com"
           touch .nojekyll
           git add -A
           git commit -m "Dashboard update $(date -u +%Y-%m-%dT%H:%MZ)"
           git push --force \
-            "https://x-access-token:${DASHBOARD_TOKEN}@github.com/neoapollo18/compete-dashboard.git" main
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
