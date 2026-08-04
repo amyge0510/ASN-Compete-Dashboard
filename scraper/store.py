@@ -5,9 +5,8 @@ difference between "AWS announced this today" and "AWS announced this three
 weeks ago and we already reported it." Only net-new items flow onward to the
 analysis layer.
 
-It is also the system of record behind the Power BI tables: insights,
-course_changes, course counts, and the per-run log all live here and are
-exported by scraper/export/powerbi.py.
+Insights, course_changes, course counts, and the per-run log all live here
+and feed the generated site.
 """
 import hashlib
 import logging

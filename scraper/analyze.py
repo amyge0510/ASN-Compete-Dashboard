@@ -30,15 +30,6 @@ insight: what changed, and what it means for AI Skills Navigator's competitive
 position. Skip items with no compete relevance (marketing fluff, event recaps
 with no product content) rather than forcing an insight.
 
-Some items are Reddit posts (source starts with "reddit:") rather than
-official competitor announcements — that's practitioner sentiment: praise,
-complaints, confusion about a cert path, or discussion of a launch the
-competitor already announced elsewhere. Treat these as signal about how the
-market is actually reacting, not as a new official update; tag them
-"community_sentiment" and let the so_what capture the sentiment (e.g. "users
-report the new exam is harder than expected" or "positive reception to the
-free-tier expansion") rather than restating it as a product change.
-
 Theme detection on catalog changes: when the newly-appearing-courses list
 contains several courses that cluster around a shared topic, ALSO produce one
 "strategy" insight naming the theme — e.g. headline "AWS is building out an
@@ -92,7 +83,7 @@ INSIGHT_PROPERTIES = {
         "type": "string",
         "enum": [
             "new_course", "removed_course", "certification", "product_update",
-            "pricing", "partnership", "strategy", "community_sentiment", "other",
+            "pricing", "partnership", "strategy", "other",
         ],
     },
     "headline": {"type": "string"},

@@ -6,6 +6,3 @@ openai>=1.60          # for LLM_PROVIDER=openai (OpenAI / Azure OpenAI credits)
 
 # Optional — only needed for JS-rendered catalogs (sources with `render: true`):
 #   pip install playwright && playwright install chromium
-
-# Optional — only needed for Reddit social listening (reddit.enabled: true):
-#   pip install praw

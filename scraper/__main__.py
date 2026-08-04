@@ -3,7 +3,6 @@
     python -m scraper                  # full pipeline run
     python -m scraper --no-analyze     # ingest + dedup only (seed the knowledge base)
     python -m scraper --no-discovery   # skip the web-search discovery layer
-    python -m scraper --no-reddit      # skip the Reddit social-listening layer
     python -m scraper check-sources    # verify every configured source works
     python -m scraper site             # regenerate site/ from the knowledge base
 """
@@ -42,8 +41,6 @@ def main() -> int:
                         help="ingest and update the knowledge base without calling the LLM")
     parser.add_argument("--no-discovery", action="store_true",
                         help="skip web-search-based source discovery")
-    parser.add_argument("--no-reddit", action="store_true",
-                        help="skip the Reddit social-listening layer")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -72,8 +69,7 @@ def main() -> int:
         print(f"Site regenerated — open {index}")
         return 0
 
-    run(skip_analysis=args.no_analyze, skip_discovery=args.no_discovery,
-        skip_reddit=args.no_reddit)
+    run(skip_analysis=args.no_analyze, skip_discovery=args.no_discovery)
     return 0
 
 
