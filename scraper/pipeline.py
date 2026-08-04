@@ -7,15 +7,14 @@ from pathlib import Path
 import yaml
 
 from scraper.analyze import analyze
-from scraper.export import deploy, powerbi, site
+from scraper.export import deploy, site
 from scraper.sources.article import enrich_items
 from scraper.sources.course_catalog import ingest_catalog
 from scraper.sources.discovery import discover
 from scraper.sources.google_skills import ingest_google_skills
-from scraper.sources.reddit import listen as reddit_listen
 from scraper.sources.rss import ingest_feed
 from scraper.sources.sitemap import ingest_sitemap
-from scraper.sources.skillbuilder import ingest_skillbuilder
+from scraper.sources.skill_builder import ingest_skillbuilder
 from scraper.store import Store, now_iso
 
 logger = logging.getLogger(__name__)
@@ -46,19 +45,13 @@ def _publish_site() -> None:
 
 def _finish(store: Store, run_at: str, run_started_at: str, items_scanned: int,
             net_new: int, insights: list[dict], summary: str) -> None:
-    """Shared run epilogue — every exit path writes every sink, so the DB,
-    site, and Power BI CSVs can't diverge based on which branch a run took."""
+    """Shared run epilogue — every exit path writes every sink, so the DB
+    and site can't diverge based on which branch a run took."""
     store.record_run(items_scanned, net_new, len(insights), summary,
                      run_at=run_at)
     store.record_course_counts(run_at)
     site.export_site(store)
     _publish_site()
-    if insights:
-        powerbi.export_insights(insights, run_at)
-        powerbi.push_to_powerbi(insights, run_at)
-    powerbi.export_course_changes(store.course_changes_since(run_started_at))
-    powerbi.export_course_counts(store.course_counts())
-    powerbi.export_run_log(items_scanned, net_new, len(insights), summary)
 
 
 def run(skip_analysis: bool = False, skip_discovery: bool = False,
@@ -110,7 +103,10 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False,
     # here never block the other sources.
     if not skip_reddit:
         try:
+            from scraper.sources.reddit import listen as reddit_listen
             all_items.extend(reddit_listen(config))
+        except ImportError:
+            logger.info("Reddit module not present — skipping social listening.")
         except Exception as e:
             logger.error("Reddit listening failed: %s", e)
 
@@ -157,10 +153,10 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False,
     for i in insights:
         print(f"  [{i['significance'].upper()}] {i['competitor']}: {i['headline']}")
 
-    # Layer 3: site (primary output) + optional Power BI CSV/push exports.
+    # Layer 3: site (primary output).
     _finish(store, run_at, run_started_at, len(all_items), len(new_items),
             insights, result["weekly_summary"])
-    logger.info("Exported %d insights — site at %s/index.html (plus output/ CSVs).",
+    logger.info("Exported %d insights — site at %s/index.html.",
                 len(insights), site.SITE_DIR)
 
 
