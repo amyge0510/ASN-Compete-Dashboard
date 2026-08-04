@@ -33,11 +33,6 @@ def extract_main_text(html: str, max_chars: int = MAX_ARTICLE_CHARS) -> str:
 def enrich_items(items: list) -> None:
     """Replace each item's summary with the full article text, best-effort."""
     for item in items:
-        # Reddit summaries carry the engagement signal (sub, upvotes,
-        # comments) the sentiment analysis needs — fetching the thread page
-        # would replace it with page chrome. Leave them alone.
-        if item.source.startswith("reddit:"):
-            continue
         try:
             text = extract_main_text(fetch(item.url))
         except Exception as e:

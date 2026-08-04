@@ -54,8 +54,7 @@ def _finish(store: Store, run_at: str, run_started_at: str, items_scanned: int,
     _publish_site()
 
 
-def run(skip_analysis: bool = False, skip_discovery: bool = False,
-        skip_reddit: bool = False) -> None:
+def run(skip_analysis: bool = False, skip_discovery: bool = False) -> None:
     store = Store()
     config = load_config()
     run_started_at = now_iso()
@@ -97,18 +96,6 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False,
             all_items.extend(discover(config))
         except Exception as e:
             logger.error("Discovery failed: %s", e)
-
-    # Layer 1c: Reddit social listening — what practitioners are actually
-    # saying, independent of what competitors publish themselves. Failures
-    # here never block the other sources.
-    if not skip_reddit:
-        try:
-            from scraper.sources.reddit import listen as reddit_listen
-            all_items.extend(reddit_listen(config))
-        except ImportError:
-            logger.info("Reddit module not present — skipping social listening.")
-        except Exception as e:
-            logger.error("Reddit listening failed: %s", e)
 
     # Knowledge-base dedup: this is what stops old news being reported as new.
     new_items = store.filter_new_items(all_items)

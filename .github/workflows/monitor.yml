@@ -59,7 +59,7 @@ jobs:
       - name: Seed on first run (empty knowledge base)
         run: |
           if [ ! -f knowledge_base.db ]; then
-            python -m scraper --no-analyze --no-discovery --no-reddit
+            python -m scraper --no-analyze --no-discovery
           fi
 
       - name: Preflight OpenAI connectivity
@@ -103,7 +103,7 @@ jobs:
           if [ "${{ inputs.mode }}" = "backfill" ]; then
             python -m scraper backfill --days 45
           else
-            python -m scraper --no-reddit
+            python -m scraper
           fi
 
       - name: Save knowledge base

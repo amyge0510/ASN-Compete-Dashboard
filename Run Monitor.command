@@ -26,7 +26,7 @@ fi
 
 echo "Checking competitor sites — this takes about 10 minutes. Leave this
 window open; the dashboard opens by itself when it finishes."
-.venv/bin/python -m scraper --no-reddit
+.venv/bin/python -m scraper
 
 open site/index.html
 echo "Done — dashboard opened in your browser."

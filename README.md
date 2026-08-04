@@ -12,11 +12,11 @@ previous run.
 ```
 Layer 1 — Ingest             Layer 2 — Interpret           Layer 3 — Report
 ─────────────────────        ────────────────────          ─────────────────
-RSS/Atom feeds        ─┐                                   site/  (the dashboard)
-Course catalogs        ├─► Knowledge base (SQLite) ─► Claude ─► output/*.csv (optional
-  (4 catalog flavors)  │   dedup: net-new only     analysis     Power BI feeds)
-Web-search discovery  ─┤        │
-Reddit social listening┘  full-article crawl of net-new items
+RSS/Atom feeds        ─┐
+Course catalogs        ├─► Knowledge base (SQLite) ─► LLM ──► site/  (the dashboard)
+  (4 catalog flavors)  │   dedup: net-new only     analysis
+Web-search discovery  ─┘        │
+                          full-article crawl of net-new items
 ```
 
 - **Configured sources** (`config/sources.yaml`) — RSS/Atom feeds parsed with
@@ -37,14 +37,6 @@ Reddit social listening┘  full-article crawl of net-new items
   inconsistent places, so each run also searches per competitor (via Claude's
   server-side `web_search` tool), surfaces the ~5 most relevant recent results
   with summaries, and feeds them into the same pipeline.
-- **Reddit social listening** (`scraper/sources/reddit.py`) — searches
-  configured subreddits (r/aws, r/AWSCertifications, r/googlecloud,
-  r/salesforce, r/csMajors, ...) for configured keywords (e.g. "skill
-  builder", "trailhead") and tags each match with the competitor its keyword
-  maps to. This is practitioner sentiment, not official announcements — the
-  analysis layer tags it `community_sentiment` rather than treating it as a
-  product update. Uses Reddit's official read-only API via `praw`; see
-  `scraper/sources/reddit.py` for the app-registration steps.
 - **Knowledge base** (`knowledge_base.db`) — every item and course ever
   observed is recorded; only never-seen items go to analysis. Product updates
   might land once a month while the pipeline runs weekly or daily; old
@@ -62,8 +54,6 @@ Reddit social listening┘  full-article crawl of net-new items
   competitor, category, significance, and date range. Self-contained
   HTML/CSS/SVG plus inline JS for the filters — no server, no CDN, no
   external dependencies. Open it, serve it, or publish it anywhere.
-- **Power BI (optional)** — append-only CSVs and an optional push-dataset
-  POST, for teams that also want the data in a Power BI model.
 
 ## Setup
 
@@ -72,18 +62,10 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 export ANTHROPIC_API_KEY=sk-ant-...        # required: analysis + discovery
-export POWERBI_PUSH_URL=https://api.powerbi.com/beta/.../rows?key=...   # optional
 
 # Only for JS-rendered catalogs (sources with `render: true`) — none of the
 # default sources need this anymore (Skill Builder now uses its GraphQL API):
 pip install playwright && playwright install chromium
-
-# Only for Reddit social listening (reddit.enabled: true in sources.yaml):
-pip install praw
-export REDDIT_CLIENT_ID=...
-export REDDIT_CLIENT_SECRET=...
-export REDDIT_USER_AGENT="compete-monitor/1.0 by u/yourname"
-# Get credentials: reddit.com/prefs/apps -> create app -> type "script"
 ```
 
 ## Running
@@ -107,7 +89,6 @@ python -m scraper --no-analyze     # first run: seed the knowledge base without
 python -m scraper                  # full run: ingest -> discover -> dedup ->
                                    # analyze -> export
 python -m scraper --no-discovery   # skip the web-search discovery layer
-python -m scraper --no-reddit      # skip the Reddit social-listening layer
 python -m scraper site             # regenerate site/ from the knowledge base
 python -m scraper -v               # debug logging
 ```
@@ -162,33 +143,14 @@ gate CI. All configured URLs were last verified live on 2026-07-28.
 optional `render: true` for JavaScript-rendered pages. `sitemap` sources
 take an optional `url_filter` (substring or list) to keep only catalog paths.
 The `skillbuilder_catalog` and `google_skills_catalog` types are
-self-contained — see `scraper/sources/skillbuilder.py` and
+self-contained — see `scraper/sources/skill_builder.py` and
 `scraper/sources/google_skills.py` for how their endpoints were derived.
 
 The `discovery:` section defines per-competitor search targets and a
 `lookback_days` window; it's independent of the configured feeds and covers
 the gaps between them.
 
-The `reddit:` section lists subreddits to search and keywords mapped to the
-competitor each implies (e.g. `trailhead` → Salesforce Trailhead). Every
-subreddit is searched with all keywords combined into one query per run;
-`time_filter` and `limit_per_subreddit` bound how far back and how much each
-search pulls. Set `reddit.enabled: false` (or pass `--no-reddit`) to turn
-this off — it requires a Reddit API app (see Setup above).
-
-## Power BI (optional)
-
-The CSVs under `output/` remain available for teams that want the same data
-in a Power BI model; nothing below is required for the site.
-
-### Data model (four tables, emitted every run)
-
-| Table | Grain | Key fields | Dashboard use |
-|---|---|---|---|
-| `insights.csv` | one row per detected update | `run_at`, `competitor`, `category`, `headline`, `so_what`, `significance`, `audience`, `ai_related`, `url` | "What's New" section, category mix, AI-move tracking |
-| `course_changes.csv` | one row per course add/remove | `run_at`, `competitor`, `title`, `change_type` | "New courses they shipped" list |
-| `course_counts.csv` | competitor × source × run | `run_at`, `competitor`, `active_courses` | catalog-size trend lines |
-| `run_log.csv` | one row per pipeline run | `run_at`, `items_scanned`, `net_new_items`, `insight_count`, `summary` | freshness card, narrative text |
+## Insight fields
 
 Field notes:
 - **`significance`** (`high`/`medium`/`low`) ranks product signal about the
@@ -198,43 +160,11 @@ Field notes:
   regardless of what the model returns. The What's New section is just
   `insights` filtered to `significance = "high"`.
 - **`category`** separates program/certification launches from routine course
-  adds, pricing moves, partnerships, and strategy shifts. `community_sentiment`
-  marks Reddit-sourced items — practitioner reaction rather than an official
-  update — so it can be filtered separately from competitor-published news.
+  adds, pricing moves, partnerships, and strategy shifts.
 - **`audience`** (`developers`/`business_users`/`both`) matters because AI
   Skills Navigator serves both — it shows which of your segments each
   competitor move targets.
 - **`ai_related`** isolates the AI-skilling race from generic catalog churn.
-
-### Suggested dashboard layout
-
-1. **What's New** (landing page) — card visuals from `insights` where
-   `significance = "high"`, newest first: headline + so-what + link. Below
-   it, a table of medium/low items. Slicers: competitor, category, audience,
-   ai_related.
-2. **Competitor deep-dive** — same tables filtered to one competitor, plus
-   their catalog trend from `course_counts` and recent `course_changes`.
-3. **Catalog trends** — line chart of `active_courses` over `run_at` per
-   competitor; bar chart of adds/removes per month from `course_changes`.
-4. **Activity cadence** — insight count per competitor per week (how fast is
-   each competitor shipping), % `ai_related` over time.
-5. **Narrative card** — latest `run_log.summary` in a text visual, plus
-   `run_at` for data freshness.
-
-### Connecting (two paths, both in `scraper/export/powerbi.py`)
-
-1. **CSV + scheduled refresh (primary)** — the CSVs are append-only run
-   logs. Put `output/` in OneDrive/SharePoint, then in Power BI Desktop:
-   Get Data → Text/CSV (one connection per table) → build the model (relate
-   tables on `competitor`; mark `run_at` as date/time) → publish to the
-   Service → set scheduled refresh (e.g. daily). Every pipeline run appends
-   rows; every refresh picks them up. Fully automatic.
-2. **Push dataset (instant "What's New")** — in powerbi.com: workspace →
-   New → Streaming dataset → API → define fields matching the `insights`
-   columns above (enable *Historic data analysis*) → copy the Push URL →
-   `export POWERBI_PUSH_URL=<push url>`. Each run then POSTs its insight
-   rows and tiles update the moment the pipeline finishes. Push datasets
-   only carry the insights table — use path 1 for the trend pages.
 
 ## Scheduling
 
@@ -268,11 +198,8 @@ extraction — no network or API key needed.
 - Per-source failures are isolated — one broken feed never kills the run.
 - Discovery costs a few LLM calls per run; disable with `--no-discovery` or
   `discovery.enabled: false` if running very frequently.
-- Reddit listening costs API calls to Reddit, not Claude, but respect
-  Reddit's rate limits on frequent schedules; disable with `--no-reddit` or
-  `reddit.enabled: false` if needed.
 - Skill Builder's anonymous GraphQL access is limited to a 100-result window
-  per query; `scraper/sources/skillbuilder.py` slices the catalog by facet
+  per query; `scraper/sources/skill_builder.py` slices the catalog by facet
   filters (type → level → duration → domain) to enumerate ~99% of it, and
   every slice is fetched newest-first so new courses always surface even in
   slices that can't be subdivided below the window. The full enumeration

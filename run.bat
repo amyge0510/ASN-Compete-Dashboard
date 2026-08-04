@@ -21,7 +21,7 @@ if "%ANTHROPIC_API_KEY%"=="" (
 
 echo Checking competitor sites — this takes about 10 minutes. Leave this
 echo window open; the dashboard opens by itself when it finishes.
-.venv\Scripts\python -m scraper --no-reddit
+.venv\Scripts\python -m scraper
 
 start site\index.html
 echo Done — dashboard opened in your browser.
