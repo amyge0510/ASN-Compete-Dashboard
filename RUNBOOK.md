@@ -53,7 +53,14 @@ Summary page** — you do not need to open any logs. It looks like this:
 It also tells you when a page **declares an RSS feed** — always prefer the
 feed over scraping the page.
 
-**For `READY` and `NEEDS A SELECTOR`, the summary includes a ready-made prompt.**
+For `NEEDS A SELECTOR`, the summary lists **suggested selectors with example
+link texts**, worked out against the live page. **Read the examples.** If they
+look like course names, the selector is right. If they say things like
+"Contact Us" or "Pricing", pick a different suggestion or stop — that is the
+one mistake the automated checks cannot catch for you.
+
+**For `READY` and `NEEDS A SELECTOR`, the summary includes a ready-made prompt**
+with the chosen selector already filled in.
 Copy the block under *"Copy this into GitHub Copilot Chat"*, replace the
 `<REPLACE WITH THE COMPETITOR'S NAME>` placeholder, and paste it into GitHub
 Copilot Chat with this repository open. The prompt already tells Copilot which

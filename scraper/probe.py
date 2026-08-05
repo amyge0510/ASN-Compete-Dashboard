@@ -116,23 +116,98 @@ def probe(url: str) -> tuple[str, list[str]]:
             "readers are examples, and each was a few hundred lines.",
         ]
 
-    if len(links) < LIST_LINK_THRESHOLD:
+    # Whether a page is a catalogue is decided by finding a coherent group of
+    # item links, not by counting links overall — a short but real catalogue
+    # (a dozen courses) would otherwise be dismissed as a landing page.
+    candidates = selector_candidates(body, url)
+    if not candidates:
         return "CUSTOM", notes + [
-            f"Only {len(links)} links found — this looks like a marketing or "
-            "landing page, not a catalog listing.",
-            "Find the page that actually lists the courses and probe that "
-            "instead.",
+            f"{len(links)} links found, but none form a group that looks like "
+            "a list of items — no shared URL pattern with title-like text.",
+            "This is probably a marketing or landing page. Find the page that "
+            "actually lists the courses and test that instead.",
         ]
 
-    return "SELECTOR", notes + [
-        f"Server-rendered with {len(links)} links, so the content is readable.",
-        "Add it with `type: course_catalog` plus an `item_selector` that "
-        "matches ONLY course links.",
-        "Without a good selector you will capture navigation and footer links "
-        "and report them as new courses.",
-        "After adding it, run the monitor once and read the first few item "
-        "titles. If they say things like 'Contact Us', the selector is wrong.",
-    ]
+    notes.append(f"Server-rendered with {len(links)} links, so the content is "
+                 "readable. Add it with `type: course_catalog` plus an "
+                 "`item_selector`.")
+    if candidates:
+        notes.append("Suggested selectors, best first — CHECK THE EXAMPLES. "
+                     "If they are menu items rather than courses, the "
+                     "selector is wrong:")
+        for c in candidates:
+            notes.append(f"    {c['selector']}  ({c['matches']} links)")
+            for sample in c["samples"]:
+                notes.append(f"        e.g. {sample}")
+    else:
+        notes.append("No obvious selector found — the course links do not "
+                     "share a URL pattern. Someone will need to inspect the "
+                     "page by hand.")
+    return "SELECTOR", notes
+
+
+# Chrome around the content. Links inside these are navigation, not items,
+# and dropping them removes most of the noise before any scoring happens.
+_CHROME_TAGS = ("nav", "header", "footer", "aside", "form")
+# Course titles read like sentences; nav labels are one or two words.
+_MIN_AVERAGE_TITLE_CHARS = 14
+_MIN_GROUP_SIZE = 5
+
+
+def selector_candidates(body: str, page_url: str, top: int = 3) -> list[dict]:
+    """Propose item_selector values, each with evidence.
+
+    The probe has the page in hand, so it can do the selector analysis
+    itself rather than asking a downstream assistant to re-fetch and guess.
+    Links are grouped by the shape of their URL — the thing that stays
+    stable across redesigns — and scored on whether the group looks like a
+    list of items rather than a menu.
+    """
+    soup = BeautifulSoup(body, "html.parser")
+    for tag in soup(_CHROME_TAGS):
+        tag.decompose()
+
+    page_host = (urlsplit(page_url).hostname or "").lower().removeprefix("www.")
+    groups: dict[str, list[tuple[str, str]]] = {}
+    for a in soup.find_all("a", href=True):
+        text = " ".join(a.get_text(" ", strip=True).split())
+        if not text:
+            continue
+        href = urljoin(page_url, a["href"])
+        parts = urlsplit(href)
+        if parts.scheme not in ("http", "https"):
+            continue
+        host = (parts.hostname or "").lower().removeprefix("www.")
+        segments = [seg for seg in parts.path.split("/") if seg]
+        keys = []
+        if host and host != page_host:
+            # Courses hosted elsewhere (Skilljar, a learn. subdomain) — the
+            # host itself is the cleanest possible selector.
+            keys.append(host)
+        for depth in (1, 2):
+            if len(segments) > depth:
+                keys.append("/" + "/".join(segments[:depth]) + "/")
+        for key in keys:
+            groups.setdefault(key, []).append((text, href))
+
+    candidates = []
+    for key, entries in groups.items():
+        titles = list(dict.fromkeys(t for t, _ in entries))
+        if len(titles) < _MIN_GROUP_SIZE:
+            continue
+        avg = sum(len(t) for t in titles) / len(titles)
+        if avg < _MIN_AVERAGE_TITLE_CHARS:
+            continue  # short labels: a menu, not a catalogue
+        candidates.append({
+            "selector": f"a[href*='{key}']",
+            "matches": len(titles),
+            "avg_title_chars": round(avg),
+            "samples": titles[:3],
+        })
+    # Prefer longer titles, then bigger groups — both point at real content.
+    candidates.sort(key=lambda c: (c["avg_title_chars"], c["matches"],
+                                   len(c["selector"])), reverse=True)
+    return candidates[:top]
 
 
 def _suggested_name(url: str) -> str:
@@ -145,7 +220,8 @@ def _suggested_name(url: str) -> str:
 
 
 def copilot_prompt(verdict: str, url: str, source_type: str | None = None,
-                   feed_url: str | None = None) -> str | None:
+                   feed_url: str | None = None,
+                   selector: str | None = None) -> str | None:
     """A self-contained prompt to paste into GitHub Copilot Chat.
 
     The point is that the person adding a source should never have to know
@@ -179,23 +255,18 @@ def copilot_prompt(verdict: str, url: str, source_type: str | None = None,
         )
 
     if verdict == "SELECTOR":
+        selector = selector or "<CHOOSE A SELECTOR — see the suggestions above>"
         return (
             f"Add a new course-catalog source to config/sources.yaml in this "
-            f"repo, for this page:\n\n  {url}\n\n"
-            f"First work out the CSS selector. Fetch the page and find the "
-            f"selector that matches ONLY links to individual courses — not "
-            f"navigation, footer, breadcrumb, or call-to-action links. Prefer "
-            f"a URL-pattern selector such as a[href*='/courses/'] over class "
-            f"names, because class names change when sites are redesigned. "
-            f"Tell me which selector you chose, roughly how many links it "
-            f"matches, and show me three example link texts so I can confirm "
-            f"they are courses and not menu items.\n\n"
-            f"Then add the entry:\n\n"
+            f"repo.\n\n"
             f"  name: {name}\n"
             f"  type: course_catalog\n"
             f"  url: {url}\n"
             f"  competitor: <REPLACE WITH THE COMPETITOR'S NAME>\n"
-            f"  item_selector: <the selector you chose>\n\n"
+            f"  item_selector: \"{selector}\"\n\n"
+            f"The selector was already worked out against the live page, so "
+            f"use it as given — do not re-derive it.\n\n"
+            f"Add a short `notes:` line saying what this source covers.\n\n"
             f"{common}"
         )
     return None
@@ -248,7 +319,12 @@ def report(url: str) -> int:
         elif note.strip().endswith("(add with `type: rss`)"):
             stype, feed = "rss", note.strip().split()[0]
 
-    prompt = copilot_prompt(verdict, url, stype, feed)
+    selector = None
+    for note in notes:
+        stripped = note.strip()
+        if stripped.startswith("a[href*=") and selector is None:
+            selector = stripped.split("  (")[0]
+    prompt = copilot_prompt(verdict, url, stype, feed, selector)
     next_step = {
         "READY": "paste the prompt below into GitHub Copilot Chat.",
         "SELECTOR": "paste the prompt below into GitHub Copilot Chat.",
