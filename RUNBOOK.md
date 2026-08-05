@@ -56,9 +56,18 @@ feed over scraping the page.
 
 For `NEEDS A SELECTOR`, the summary lists **suggested selectors with example
 link texts**, worked out against the live page. **Read the examples.** If they
-look like course names, the selector is right. If they say things like
-"Contact Us" or "Pricing", pick a different suggestion or stop — that is the
-one mistake the automated checks cannot catch for you.
+look like course names, the selector is right.
+
+A selector is only suggested — and a prompt only produced — when the check is
+confident: a group of at least 8 links, with title-like text, and almost no
+call-to-action labels. A page whose only link groups look like navigation
+("View full catalog", "All Courses", "Benefits") comes back as `NEEDS CUSTOM
+CODE` with those groups shown as rejected, and **no prompt to paste**. Silence
+is the failsafe: if there is nothing to copy, there is nothing to add.
+
+That check is good, not perfect. If a suggestion's examples look wrong to you,
+trust yourself over the tool and stop — you are the last line of defence, and
+it is the one mistake nothing downstream can catch.
 
 **For `READY` and `NEEDS A SELECTOR`, the summary includes a ready-made prompt**
 with the chosen selector already filled in.

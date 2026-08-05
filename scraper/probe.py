@@ -145,13 +145,21 @@ def probe(url: str) -> tuple[str, list[str]]:
     # item links, not by counting links overall — a short but real catalogue
     # (a dozen courses) would otherwise be dismissed as a landing page.
     candidates = selector_candidates(body, url)
-    if not candidates:
-        return "CUSTOM", notes + [
-            f"{len(links)} links found, but none form a group that looks like "
-            "a list of items — no shared URL pattern with title-like text.",
+    if not any(c["confident"] for c in candidates):
+        detail = [
+            f"{len(links)} links found, but none form a group that is clearly "
+            "a list of courses rather than navigation.",
             "This is probably a marketing or landing page. Find the page that "
             "actually lists the courses and test that instead.",
         ]
+        if candidates:
+            detail.append("The closest groups, rejected as too small or too "
+                          "navigation-like:")
+            for c in candidates[:2]:
+                detail.append(f"    {c['selector']}  ({c['matches']} links)")
+                for sample in c["samples"][:3]:
+                    detail.append(f"        e.g. {sample}")
+        return "CUSTOM", notes + detail
 
     notes.append(f"Server-rendered with {len(links)} links, so the content is "
                  "readable. Add it with `type: course_catalog` plus an "
@@ -161,6 +169,8 @@ def probe(url: str) -> tuple[str, list[str]]:
                      "If they are menu items rather than courses, the "
                      "selector is wrong:")
         for c in candidates:
+            if not c["confident"]:
+                continue
             notes.append(f"    {c['selector']}  ({c['matches']} links)")
             for sample in c["samples"]:
                 notes.append(f"        e.g. {sample}")
@@ -176,7 +186,31 @@ def probe(url: str) -> tuple[str, list[str]]:
 _CHROME_TAGS = ("nav", "header", "footer", "aside", "form")
 # Course titles read like sentences; nav labels are one or two words.
 _MIN_AVERAGE_TITLE_CHARS = 14
-_MIN_GROUP_SIZE = 5
+# Five links is not enough to distinguish a catalogue from a row of buttons.
+_MIN_GROUP_SIZE = 8
+
+# Calls to action and filter labels. These survive the chrome strip because
+# sites put them in the body — "View full catalog", "All Courses", "Benefits"
+# read like content but are navigation. A group full of them is not a
+# catalogue, however long the strings are.
+_NAV_TEXT = re.compile(
+    r"^(view|see|browse|explore|discover|find|shop|start|get started|learn more"
+    r"|read more|show|more|all|free|new|popular|featured|filter|sort|next"
+    r"|previous|back|home|overview|benefits|pricing|contact|about|sign in"
+    r"|sign up|log in|register|subscribe|download|watch|why|how|what|who)\b",
+    re.I)
+# A group is only trustworthy if few of its labels look navigational.
+_MAX_NAV_FRACTION = 0.25
+# Confident enough to hand someone a ready-made prompt. A little nav-looking
+# text is tolerated: real course titles legitimately start with "How to" or
+# "What is", and demanding zero would reject good catalogues.
+_CONFIDENT_MIN_SIZE = 8
+_CONFIDENT_MIN_TITLE_CHARS = 20
+_CONFIDENT_MAX_NAV_FRACTION = 0.15
+
+
+def _nav_fraction(titles: list[str]) -> float:
+    return sum(1 for t in titles if _NAV_TEXT.match(t)) / len(titles)
 
 
 def selector_candidates(body: str, page_url: str, top: int = 3) -> list[dict]:
@@ -223,11 +257,18 @@ def selector_candidates(body: str, page_url: str, top: int = 3) -> list[dict]:
         avg = sum(len(t) for t in titles) / len(titles)
         if avg < _MIN_AVERAGE_TITLE_CHARS:
             continue  # short labels: a menu, not a catalogue
+        nav = _nav_fraction(titles)
+        if nav > _MAX_NAV_FRACTION:
+            continue  # mostly calls to action: a navigation cluster
         candidates.append({
             "selector": f"a[href*='{key}']",
             "matches": len(titles),
             "avg_title_chars": round(avg),
-            "samples": titles[:3],
+            "nav_fraction": round(nav, 2),
+            "confident": (len(titles) >= _CONFIDENT_MIN_SIZE
+                          and avg >= _CONFIDENT_MIN_TITLE_CHARS
+                          and nav <= _CONFIDENT_MAX_NAV_FRACTION),
+            "samples": titles[:5],
         })
     # Prefer longer titles, then bigger groups — both point at real content.
     candidates.sort(key=lambda c: (c["avg_title_chars"], c["matches"],
