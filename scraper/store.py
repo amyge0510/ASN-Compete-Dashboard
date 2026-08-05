@@ -10,9 +10,11 @@ and feed the generated site.
 """
 import hashlib
 import logging
+import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +93,59 @@ def now_iso() -> str:
 _now = now_iso
 
 
+# Query params that identify a campaign, not a document. Two URLs differing
+# only by these are the same article.
+_TRACKING_PARAMS = {
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "utm_id", "fbclid", "gclid", "mc_cid", "mc_eid", "ref", "referrer",
+    "source", "cmp", "spm",
+}
+
+
+def normalize_url(url: str) -> str:
+    """Canonical form of an article URL.
+
+    Discovery results come back from a web search, so the same article
+    arrives with a trailing slash one run and without it the next, or with a
+    campaign parameter attached. Hashing the raw string made each variant a
+    different item, so the same story was re-analyzed as net-new. Collapsing
+    scheme, host case, `www.`, tracking params, fragments and trailing
+    slashes makes the identity stable.
+    """
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return url.strip()
+    if not parts.netloc:
+        return url.strip()
+    host = (parts.hostname or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if parts.port:
+        host = f"{host}:{parts.port}"
+    path = parts.path.rstrip("/") or "/"
+    query = urlencode([(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)
+                       if k.lower() not in _TRACKING_PARAMS])
+    return urlunsplit(("https", host, path, query, ""))
+
+
 def item_id(url: str) -> str:
+    """Stable identity for an item, computed from its normalized URL."""
+    return hashlib.sha256(normalize_url(url).encode()).hexdigest()
+
+
+def legacy_item_id(url: str) -> str:
+    """Pre-normalization identity — still honoured so an existing knowledge
+    base does not re-report everything once after the normalization change."""
     return hashlib.sha256(url.encode()).hexdigest()
+
+
+def headline_key(competitor: str, headline: str) -> str:
+    """Loose identity for an insight: same competitor, same headline modulo
+    punctuation, case and whitespace. Catches the same story re-reported
+    from a differently-shaped URL."""
+    words = re.sub(r"[^a-z0-9 ]+", " ", (headline or "").lower())
+    return f"{(competitor or '').strip().lower()}|{' '.join(words.split())}"
 
 
 # Below this fraction of the previous snapshot, a catalog fetch is treated as
@@ -146,7 +199,8 @@ class Store:
             if iid in batch_ids:  # same URL from two sources in one run
                 continue
             row = self.conn.execute(
-                "SELECT 1 FROM seen_items WHERE id = ?", (iid,)
+                "SELECT 1 FROM seen_items WHERE id = ? OR id = ?",
+                (iid, legacy_item_id(item.url)),
             ).fetchone()
             if row:
                 continue
@@ -260,10 +314,37 @@ class Store:
             (since_iso,),
         ).fetchall()
 
+    def recent_headline_keys(self, days: int = 90) -> set[str]:
+        """Loose identities of insights reported in the last `days`."""
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(
+            timespec="seconds")
+        return {headline_key(c, h) for c, h in self.conn.execute(
+            "SELECT competitor, headline FROM insights WHERE run_at >= ?",
+            (since,))}
+
     def record_insights(self, insights: list[dict],
-                        run_at: str | None = None) -> str:
-        """Store this run's insights; returns the run_at timestamp used."""
+                        run_at: str | None = None,
+                        dedupe_days: int = 90) -> str:
+        """Store this run's insights; returns the run_at timestamp used.
+
+        Insights whose (competitor, headline) was already reported in the
+        last `dedupe_days` are skipped. Item-level dedup catches the same
+        URL; this catches the same story arriving via a different URL —
+        which is the normal case for web-search discovery.
+        """
         now = run_at or _now()
+        if dedupe_days:
+            already = self.recent_headline_keys(dedupe_days)
+            kept = []
+            for i in insights:
+                key = headline_key(i["competitor"], i["headline"])
+                if key in already:
+                    logger.info("Skipping already-reported story: %s: %s",
+                                i["competitor"], i["headline"])
+                    continue
+                already.add(key)
+                kept.append(i)
+            insights = kept
         self.conn.executemany(
             "INSERT OR IGNORE INTO insights (run_at, competitor, category, headline, "
             "what_changed, so_what, significance, audience, ai_related, url) "
