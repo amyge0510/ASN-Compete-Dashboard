@@ -23,8 +23,6 @@ from scraper.fetch import fetch
 
 logger = logging.getLogger(__name__)
 
-# Below this, a page is a landing page rather than a catalog listing.
-LIST_LINK_THRESHOLD = 25
 # A page whose body has almost no text but plenty of script tags is a shell
 # that assembles itself in the browser.
 SPA_TEXT_FLOOR = 600
