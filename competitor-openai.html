@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenAI — Compete Monitor</title>
+<style>
+  :root { color-scheme: light;
+          --bg: #faf7ef; --band: #f2ecdb; --card: #ffffff;
+          --line: #e7e1d2; --ink: #17181a; --muted: #6f6f6f;
+          --teal: #6c5898; --teal-deep: #54447a; --teal-fill: #efecf6;
+          --red: #b3402e; --amber: #a8722a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", -apple-system, system-ui, sans-serif;
+         background: var(--bg); color: var(--ink); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 64px; }
+  nav { background: var(--band); border-bottom: 1px solid var(--line);
+        margin: 0 -24px 28px; padding: 14px 24px;
+        display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
+  nav .brand { color: var(--ink); font-weight: 700; font-size: 15px;
+               letter-spacing: .02em; margin-right: 8px; text-decoration: none; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; }
+  nav a:hover { color: var(--teal-deep); }
+  nav a.active { color: var(--teal-deep); border-bottom: 2px solid var(--teal);
+                 padding-bottom: 2px; font-weight: 600; }
+  nav .refresh { margin-left: auto; background: var(--teal-deep); color: #fff;
+                 border: none; border-radius: 8px; padding: 6px 14px;
+                 font-size: 12px; font-weight: 600; cursor: pointer;
+                 text-decoration: none; }
+  nav .refresh:hover { background: var(--teal); color: #fff; }
+  nav button.refresh { font-family: inherit; }
+  nav .refresh[disabled] { opacity: .75; cursor: default; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .summary { background: var(--card); border: 1px solid var(--line);
+             border-left: 4px solid var(--teal); border-radius: 12px;
+             padding: 14px 18px; font-size: 15px; line-height: 1.5; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+          gap: 12px; margin: 20px 0 8px; }
+  .kpi { background: var(--card); border: 1.5px solid var(--teal);
+         border-radius: 12px; padding: 12px 16px; }
+  .kpi .n { font-size: 24px; font-weight: 700; color: var(--teal);
+            font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 11px; color: var(--muted); text-transform: uppercase;
+            letter-spacing: .06em; }
+  h2 { font-size: 15px; margin: 32px 0 12px; text-transform: uppercase;
+       letter-spacing: .05em; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+           gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line);
+          border-radius: 12px; padding: 14px 16px; }
+  .card .meta { font-size: 12px; margin-bottom: 6px; }
+  .badge { display: inline-block; border-radius: 10px; padding: 1px 9px;
+           font-size: 11px; font-weight: 600; color: #fff; }
+  .chip { display: inline-block; background: var(--teal-fill); border-radius: 10px;
+          padding: 1px 9px; font-size: 11px; color: var(--teal-deep);
+          margin-left: 6px; }
+  .chip.new { background: #e4efe2; color: #3c6b35; font-weight: 700; }
+  .card h3 { font-size: 15px; margin: 0 0 6px; }
+  .card h3 a, td a, .comp-block a { color: var(--teal-deep); text-decoration: none; }
+  .card p { font-size: 13px; color: #444; margin: 0; line-height: 1.45; }
+  .card p + p { margin-top: 6px; }
+  .card p strong { color: var(--ink); }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+             margin: 0 0 10px; font-size: 13px; }
+  .filters select, .filters input { font: inherit; font-size: 13px;
+             padding: 4px 8px; border: 1px solid var(--line);
+             border-radius: 8px; background: var(--card); color: var(--ink); }
+  .filters label { color: var(--muted); display: flex; gap: 6px;
+                   align-items: center; }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+          font-size: 13px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #efeadd;
+           vertical-align: top; }
+  th { background: #fbf9f3; font-size: 11px; color: var(--muted);
+       text-transform: uppercase; letter-spacing: .06em; }
+  tr:last-child td { border-bottom: none; }
+  .comp-block { background: var(--card); border: 1px solid var(--line);
+                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .comp-block h3 { margin: 0 0 8px; font-size: 15px; }
+  .comp-block ul { margin: 6px 0; padding-left: 20px; font-size: 13px;
+                   line-height: 1.6; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .removed { color: var(--red); }
+  .chart { background: var(--card); border: 1px solid var(--line);
+           border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .legend { font-size: 12px; margin-top: 6px; }
+  .legend span { margin-right: 14px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 5px;
+         margin-right: 4px; }
+  footer { margin-top: 40px; color: #a39d8d; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap"><nav><a class="brand" href="index.html">Compete Monitor</a><a href="index.html">Overview</a><a href="competitor-aws.html">AWS</a><a href="competitor-anthropic.html">Anthropic</a><a href="competitor-coursera.html">Coursera</a><a href="competitor-google.html">Google</a><a href="competitor-industry.html">Industry</a><a href="competitor-linkedin-learning.html">LinkedIn Learning</a><a href="competitor-openai.html" class="active">OpenAI</a><a href="competitor-salesforce-trailhead.html">Salesforce Trailhead</a><a href="competitor-servicenow-university.html">ServiceNow University</a><a href="competitor-udemy.html">Udemy</a><a class="refresh" href="https://github.com/amyge0510/ASN-Compete-Dashboard/actions/workflows/monitor.yml" target="_blank" rel="noopener" title="Runs a fresh check (takes ~15 minutes); refresh this page afterwards">&#8635; Refresh data</a></nav>
+<h1>OpenAI</h1><div class="sub">Insight history for all runs; catalog changes shown for the last 30 days.</div><h2>Insight history</h2><table><tr><th>Date</th><th></th><th>Category</th><th>Headline</th></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://openai.com/index/introducing-chatgpt-small-business-program/">OpenAI rolls out a small business program with virtual training and in‑person AI academies</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://openai.com/index/academy-courses-applying-ai-at-work/">OpenAI launches free Academy courses: AI Foundations, Applied AI Foundations, and Agents &amp; Workflows</a></td></tr><tr data-competitor="OpenAI" data-category="other" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>other</td><td><a href="https://openai.com/index/codex-maxxing-long-running-work">OpenAI publishes a practical guide to using Codex for long‑running, agentic work</a></td></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://openai.com/index/introducing-chatgpt-small-business-program">OpenAI launches a ChatGPT for Small Business skilling program with virtual training, in‑person AI academies, and new guides</a></td></tr><tr data-competitor="OpenAI" data-category="strategy" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>strategy</td><td><a href="https://openai.com/index/chatgpt-for-your-most-ambitious-work">OpenAI is building a role-based ChatGPT Work skilling track (3 new Academy guides)</a></td></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://openai.com/index/learn-teach-chatgpt-work-codex">OpenAI adds education plugins to ChatGPT Work and Codex for K–12 and higher ed</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://openai.com/academy/codex-for-work/how-data-science-teams-use-codex">OpenAI Academy publishes “How data science teams use ChatGPT Work” guide and on‑demand webinar</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="low" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#8a8a8a">LOW</span></td><td>new_course</td><td><a href="https://openai.com/academy/getting-started">OpenAI Academy posts “Getting started with ChatGPT” foundational onboarding lesson</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://openai.com/academy/codex-for-work/how-sales-teams-use-codex">OpenAI Academy adds “How sales teams use ChatGPT Work,” including a sales plugin workflow</a></td></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="high" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>product_update</td><td><a href="https://openai.com/business/apps/openai-certified/">OpenAI launches ‘OpenAI Certified’—in‑ChatGPT enterprise learning and credentials</a></td></tr><tr data-competitor="OpenAI" data-category="other" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>other</td><td><a href="https://academy.openai.com/en/public/clubs/champions-ecqup/resources/ai-workflow-packager-2026-07-07">OpenAI Academy publishes an ‘AI workflow packager’ operational template</a></td></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://openai.com/index/learn-teach-chatgpt-work-codex">OpenAI ships education plugins for ChatGPT Work and Codex for K–12 and higher ed</a></td></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://openai.com/index/introducing-chatgpt-small-business-program">OpenAI launches a “ChatGPT for small business” skilling program with virtual training and in-person academies</a></td></tr><tr data-competitor="OpenAI" data-category="strategy" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>strategy</td><td><a href="https://openai.com/academy/codex-for-work/how-data-science-teams-use-codex">OpenAI is building role-based ChatGPT Work tracks (2 of 3 new Academy items)</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://openai.com/academy/codex-for-work/how-sales-teams-use-codex">OpenAI Academy publishes “How sales teams use ChatGPT Work,” with a sales plugin workflow</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="low" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#8a8a8a">LOW</span></td><td>new_course</td><td><a href="https://openai.com/academy/getting-started">OpenAI Academy posts “Getting started with ChatGPT”</a></td></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://openai.com/index/k-12-educators-practical-skills">OpenAI Academy launches AI Skills Jam for K–12 educators</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://openai.com/academy/codex-for-work/how-data-science-teams-use-codex">OpenAI Academy adds “How data science teams use ChatGPT Work”</a></td></tr><tr data-competitor="OpenAI" data-category="strategy" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>strategy</td><td><a href="https://academy.openai.com/">OpenAI is building a role‑based &#x27;ChatGPT Work&#x27; track (guides + live Skill Labs)</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://openai.com/academy/codex-for-work/how-sales-teams-use-codex/">OpenAI Academy publishes role‑based ChatGPT Work guides for data science and sales</a></td></tr><tr data-competitor="OpenAI" data-category="product_update" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://openai.com/academy/">OpenAI Academy offers structured, certificate‑bearing courses across three tiers</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://academy.openai.com/public/resources/openai-academy-small-business-resource-hub-2026-06-03">OpenAI Academy launches Small Business resource hub for ChatGPT workshops</a></td></tr><tr data-competitor="OpenAI" data-category="new_course" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://openai.com/academy/getting-started/">OpenAI Academy adds &#x27;Getting started with ChatGPT&#x27; onboarding course</a></td></tr></table><h2>Catalog changes (30d)</h2><div class="comp-block"><h3>Added (5)</h3><ul><li><a href="https://academy.openai.com/public/blogs/colin-knudsen-proaction-codex-customer-demos">Colin Knudsen Proaction Codex Customer Demos</a></li><li><a href="https://academy.openai.com/public/blogs/jeremy-rose-codex-voice-mode-accessible-coding">Jeremy Rose Codex Voice Mode Accessible Coding</a></li><li><a href="https://academy.openai.com/public/blogs/ava-morton-chatgpt-accessible-special-education">Ava Morton Chatgpt Accessible Special Education</a></li><li><a href="https://academy.openai.com/public/blogs/rebecca-soskin-hicks-chatgpt-health-between-visits">Rebecca Soskin Hicks Chatgpt Health Between Visits</a></li><li><a href="https://academy.openai.com/public/blogs/ben-palka-chatgpt-sermons-community">Ben Palka Chatgpt Sermons Community</a></li></ul><h3>Removed (5)</h3><ul><li class="removed"><a href="https://academy.openai.com/public/videos/brinnae-bent-emerging-trends-in-explainable-ai-offensive-and-defensive-uses-of-ai-executive-education-on-ai-and-cybersecurity-2025-08-20">Brinnae Bent Emerging Trends In Explainable Ai Offensive And Defensive Uses Of Ai Executive Education On Ai And Cybersecurity 2025 08 20</a></li><li class="removed"><a href="https://academy.openai.com/public/videos/dr-akhil-damodaran-business-policy-and-strategy-2025-08-20">Dr Akhil Damodaran Business Policy And Strategy 2025 08 20</a></li><li class="removed"><a href="https://academy.openai.com/public/videos/kiran-v-k-cst-308-comprehensive-coursework-for-iii-year-computer-science-and-engineering-students-2025-08-20">Kiran V K Cst 308 Comprehensive Coursework For Iii Year Computer Science And Engineering Students 2025 08 20</a></li><li class="removed"><a href="https://academy.openai.com/public/videos/luis-h-reyes-project-of-unit-operations-2025-08-20">Luis H Reyes Project Of Unit Operations 2025 08 20</a></li><li class="removed"><a href="https://academy.openai.com/public/videos/marina-jovic-academic-writing-2025-08-20">Marina Jovic Academic Writing 2025 08 20</a></li></ul></div><h2>Catalog trend</h2><div class="chart"><svg viewBox="0 0 900 260" width="100%" role="img"><line x1="40" y1="220" x2="890" y2="220" stroke="#d1d5db"/><text x="34" y="224.0" font-size="10" fill="#6b7280" text-anchor="end">0</text><text x="34" y="119.0" font-size="10" fill="#6b7280" text-anchor="end">112</text><text x="34" y="14.0" font-size="10" fill="#6b7280" text-anchor="end">224</text><polyline points="40.0,10.0 181.7,10.0 323.3,10.0 465.0,10.0 606.7,10.0 748.3,10.0 890.0,10.0" fill="none" stroke="#6c5898" stroke-width="2"/><circle cx="40.0" cy="10.0" r="3" fill="#6c5898"/><circle cx="181.7" cy="10.0" r="3" fill="#6c5898"/><circle cx="323.3" cy="10.0" r="3" fill="#6c5898"/><circle cx="465.0" cy="10.0" r="3" fill="#6c5898"/><circle cx="606.7" cy="10.0" r="3" fill="#6c5898"/><circle cx="748.3" cy="10.0" r="3" fill="#6c5898"/><circle cx="890.0" cy="10.0" r="3" fill="#6c5898"/><text x="40.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-04</text><text x="181.7" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-04</text><text x="323.3" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-04</text><text x="465.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text><text x="606.7" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text><text x="748.3" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text><text x="890.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text></svg><div class="legend"><span><span class="dot" style="background:#6c5898"></span>OpenAI</span></div></div><h2>Catalog</h2><table><tr><th>Source</th><th>Active items</th></tr><tr><td>openai-academy-catalog</td><td>224</td></tr></table>
+<footer>Generated 2026-08-05 16:45 UTC by the compete-monitor pipeline. Regenerate with <code>python -m scraper site</code>.</footer></div>
+</body>
+</html>

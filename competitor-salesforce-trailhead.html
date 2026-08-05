@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Trailhead — Compete Monitor</title>
+<style>
+  :root { color-scheme: light;
+          --bg: #faf7ef; --band: #f2ecdb; --card: #ffffff;
+          --line: #e7e1d2; --ink: #17181a; --muted: #6f6f6f;
+          --teal: #6c5898; --teal-deep: #54447a; --teal-fill: #efecf6;
+          --red: #b3402e; --amber: #a8722a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", -apple-system, system-ui, sans-serif;
+         background: var(--bg); color: var(--ink); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 64px; }
+  nav { background: var(--band); border-bottom: 1px solid var(--line);
+        margin: 0 -24px 28px; padding: 14px 24px;
+        display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
+  nav .brand { color: var(--ink); font-weight: 700; font-size: 15px;
+               letter-spacing: .02em; margin-right: 8px; text-decoration: none; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; }
+  nav a:hover { color: var(--teal-deep); }
+  nav a.active { color: var(--teal-deep); border-bottom: 2px solid var(--teal);
+                 padding-bottom: 2px; font-weight: 600; }
+  nav .refresh { margin-left: auto; background: var(--teal-deep); color: #fff;
+                 border: none; border-radius: 8px; padding: 6px 14px;
+                 font-size: 12px; font-weight: 600; cursor: pointer;
+                 text-decoration: none; }
+  nav .refresh:hover { background: var(--teal); color: #fff; }
+  nav button.refresh { font-family: inherit; }
+  nav .refresh[disabled] { opacity: .75; cursor: default; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .summary { background: var(--card); border: 1px solid var(--line);
+             border-left: 4px solid var(--teal); border-radius: 12px;
+             padding: 14px 18px; font-size: 15px; line-height: 1.5; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+          gap: 12px; margin: 20px 0 8px; }
+  .kpi { background: var(--card); border: 1.5px solid var(--teal);
+         border-radius: 12px; padding: 12px 16px; }
+  .kpi .n { font-size: 24px; font-weight: 700; color: var(--teal);
+            font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 11px; color: var(--muted); text-transform: uppercase;
+            letter-spacing: .06em; }
+  h2 { font-size: 15px; margin: 32px 0 12px; text-transform: uppercase;
+       letter-spacing: .05em; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+           gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line);
+          border-radius: 12px; padding: 14px 16px; }
+  .card .meta { font-size: 12px; margin-bottom: 6px; }
+  .badge { display: inline-block; border-radius: 10px; padding: 1px 9px;
+           font-size: 11px; font-weight: 600; color: #fff; }
+  .chip { display: inline-block; background: var(--teal-fill); border-radius: 10px;
+          padding: 1px 9px; font-size: 11px; color: var(--teal-deep);
+          margin-left: 6px; }
+  .chip.new { background: #e4efe2; color: #3c6b35; font-weight: 700; }
+  .card h3 { font-size: 15px; margin: 0 0 6px; }
+  .card h3 a, td a, .comp-block a { color: var(--teal-deep); text-decoration: none; }
+  .card p { font-size: 13px; color: #444; margin: 0; line-height: 1.45; }
+  .card p + p { margin-top: 6px; }
+  .card p strong { color: var(--ink); }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+             margin: 0 0 10px; font-size: 13px; }
+  .filters select, .filters input { font: inherit; font-size: 13px;
+             padding: 4px 8px; border: 1px solid var(--line);
+             border-radius: 8px; background: var(--card); color: var(--ink); }
+  .filters label { color: var(--muted); display: flex; gap: 6px;
+                   align-items: center; }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+          font-size: 13px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #efeadd;
+           vertical-align: top; }
+  th { background: #fbf9f3; font-size: 11px; color: var(--muted);
+       text-transform: uppercase; letter-spacing: .06em; }
+  tr:last-child td { border-bottom: none; }
+  .comp-block { background: var(--card); border: 1px solid var(--line);
+                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .comp-block h3 { margin: 0 0 8px; font-size: 15px; }
+  .comp-block ul { margin: 6px 0; padding-left: 20px; font-size: 13px;
+                   line-height: 1.6; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .removed { color: var(--red); }
+  .chart { background: var(--card); border: 1px solid var(--line);
+           border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .legend { font-size: 12px; margin-top: 6px; }
+  .legend span { margin-right: 14px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 5px;
+         margin-right: 4px; }
+  footer { margin-top: 40px; color: #a39d8d; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap"><nav><a class="brand" href="index.html">Compete Monitor</a><a href="index.html">Overview</a><a href="competitor-aws.html">AWS</a><a href="competitor-anthropic.html">Anthropic</a><a href="competitor-coursera.html">Coursera</a><a href="competitor-google.html">Google</a><a href="competitor-industry.html">Industry</a><a href="competitor-linkedin-learning.html">LinkedIn Learning</a><a href="competitor-openai.html">OpenAI</a><a href="competitor-salesforce-trailhead.html" class="active">Salesforce Trailhead</a><a href="competitor-servicenow-university.html">ServiceNow University</a><a href="competitor-udemy.html">Udemy</a><a class="refresh" href="https://github.com/amyge0510/ASN-Compete-Dashboard/actions/workflows/monitor.yml" target="_blank" rel="noopener" title="Runs a fresh check (takes ~15 minutes); refresh this page afterwards">&#8635; Refresh data</a></nav>
+<h1>Salesforce Trailhead</h1><div class="sub">Insight history for all runs; catalog changes shown for the last 30 days.</div><h2>Insight history</h2><table><tr><th>Date</th><th></th><th>Category</th><th>Headline</th></tr><tr data-competitor="Salesforce Trailhead" data-category="certification" data-sig="high" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>certification</td><td><a href="https://help.salesforce.com/s/articleView?id=005360289&amp;type=1">Trailhead to retire 24 Salesforce certifications by February 2027</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="new_course" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://trailhead.salesforce.com/content/learn/modules/summer-26-release-highlights/see-whats-new-slack-agentforce-agentforce-sales">Trailhead adds Summer ’26 module on Slack CRM and Agentforce Sales</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="certification" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>certification</td><td><a href="https://help.salesforce.com/s/articleView?id=005298915&amp;type=1">Salesforce renames 16 certifications to align with Agentforce branding</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="product_update" data-sig="high" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>product_update</td><td><a href="https://trailhead.salesforce.com/agentblazer">Salesforce refreshes Agentblazer Status tiers with new Agentforce superbadges</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="new_course" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://trailhead.salesforce.com/content/learn/modules/programmatic-instructions-in-agentforce">New Trailhead badge teaches programmatic instructions for Agentforce</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="strategy" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>strategy</td><td><a href="https://www.salesforce.com/blog/small-business/ai-skills-for-founders/">Trailhead packages 10 free AI courses for founders/SMBs</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="product_update" data-sig="high" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>product_update</td><td><a href="https://trailhead.salesforce.com/en/credentials/associateoverview">Trailhead rolls out a revamped certification hub with tailored exam suggestions</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="certification" data-sig="high" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>certification</td><td><a href="https://trailheadacademy.salesforce.com/certification-overview">Trailhead introduces Agentblazer framework and new Agentforce Specialist certification</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="strategy" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>strategy</td><td><a href="https://trailhead.salesforce.com/content/learn/trails/transform-your-business-data-with-informatica-mdm-saas">Trailhead adds an Informatica MDM SaaS learning track (4 modules + trail)</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="new_course" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://trailhead.salesforce.com/content/learn/trails/prepare-for-your-marketing-cloud-next-consultant-certification">Prepare for Your Marketing Cloud Next Consultant Certification (new trail)</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="new_course" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://trailhead.salesforce.com/content/learn/modules/summer-26-release-highlights/">Trailhead adds Summer ’26 Release Highlights module with 1,000‑point badge</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="certification" data-sig="high" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>certification</td><td><a href="https://help.salesforce.com/s/articleView?id=005360289&amp;language=en_US&amp;type=1">Salesforce schedules a broad retirement of 24 certifications through early 2027</a></td></tr><tr data-competitor="Salesforce Trailhead" data-category="certification" data-sig="high" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>certification</td><td><a href="https://help.salesforce.com/s/articleView?id=005298915&amp;language=en_US&amp;type=1">Salesforce rebrands 16 certifications with &#x27;Agentforce&#x27; and updated product names</a></td></tr></table><h2>Catalog changes (30d)</h2><div class="comp-block"><h3>Added (6)</h3><ul><li><a href="https://trailhead.salesforce.com/content/learn/modules/informatica-cloud-mdm-reports-and-dashboards-management">Informatica Cloud Mdm Reports And Dashboards Management</a></li><li><a href="https://trailhead.salesforce.com/content/learn/modules/informatica-cloud-mdm-reports-and-dashboards-management/read-what-your-supplier-data-is-telling-you">Read What Your Supplier Data Is Telling You</a></li><li><a href="https://trailhead.salesforce.com/content/learn/modules/informatica-cloud-mdm-reports-and-dashboards-management/analyze-and-act-on-your-supplier-data">Analyze And Act On Your Supplier Data</a></li><li><a href="https://trailhead.salesforce.com/content/learn/modules/informatica-cloud-mdm-reports-and-dashboards-management/share-insights-with-dashboards">Share Insights With Dashboards</a></li><li><a href="https://trailhead.salesforce.com/content/learn/trails/transform-your-business-data-with-informatica-mdm-saas">Transform Your Business Data With Informatica Mdm Saas</a></li><li><a href="https://trailhead.salesforce.com/content/learn/trails/prepare-for-your-marketing-cloud-next-consultant-certification">Prepare For Your Marketing Cloud Next Consultant Certification</a></li></ul></div><h2>Catalog trend</h2><div class="chart"><svg viewBox="0 0 900 260" width="100%" role="img"><line x1="40" y1="220" x2="890" y2="220" stroke="#d1d5db"/><text x="34" y="224.0" font-size="10" fill="#6b7280" text-anchor="end">0</text><text x="34" y="119.01270417422867" font-size="10" fill="#6b7280" text-anchor="end">4132</text><text x="34" y="14.0" font-size="10" fill="#6b7280" text-anchor="end">8265</text><polyline points="40.0,10.2 181.7,10.2 323.3,10.2 465.0,10.0 606.7,10.0 748.3,10.0 890.0,10.0" fill="none" stroke="#6c5898" stroke-width="2"/><circle cx="40.0" cy="10.2" r="3" fill="#6c5898"/><circle cx="181.7" cy="10.2" r="3" fill="#6c5898"/><circle cx="323.3" cy="10.2" r="3" fill="#6c5898"/><circle cx="465.0" cy="10.0" r="3" fill="#6c5898"/><circle cx="606.7" cy="10.0" r="3" fill="#6c5898"/><circle cx="748.3" cy="10.0" r="3" fill="#6c5898"/><circle cx="890.0" cy="10.0" r="3" fill="#6c5898"/><text x="40.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-04</text><text x="181.7" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-04</text><text x="323.3" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-04</text><text x="465.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text><text x="606.7" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text><text x="748.3" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text><text x="890.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-05</text></svg><div class="legend"><span><span class="dot" style="background:#6c5898"></span>Salesforce Trailhead</span></div></div><h2>Catalog</h2><table><tr><th>Source</th><th>Active items</th></tr><tr><td>trailhead-catalog</td><td>8265</td></tr></table>
+<footer>Generated 2026-08-05 16:45 UTC by the compete-monitor pipeline. Regenerate with <code>python -m scraper site</code>.</footer></div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ServiceNow University — Compete Monitor</title>
+<style>
+  :root { color-scheme: light;
+          --bg: #faf7ef; --band: #f2ecdb; --card: #ffffff;
+          --line: #e7e1d2; --ink: #17181a; --muted: #6f6f6f;
+          --teal: #6c5898; --teal-deep: #54447a; --teal-fill: #efecf6;
+          --red: #b3402e; --amber: #a8722a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", -apple-system, system-ui, sans-serif;
+         background: var(--bg); color: var(--ink); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 64px; }
+  nav { background: var(--band); border-bottom: 1px solid var(--line);
+        margin: 0 -24px 28px; padding: 14px 24px;
+        display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
+  nav .brand { color: var(--ink); font-weight: 700; font-size: 15px;
+               letter-spacing: .02em; margin-right: 8px; text-decoration: none; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; }
+  nav a:hover { color: var(--teal-deep); }
+  nav a.active { color: var(--teal-deep); border-bottom: 2px solid var(--teal);
+                 padding-bottom: 2px; font-weight: 600; }
+  nav .refresh { margin-left: auto; background: var(--teal-deep); color: #fff;
+                 border: none; border-radius: 8px; padding: 6px 14px;
+                 font-size: 12px; font-weight: 600; cursor: pointer;
+                 text-decoration: none; }
+  nav .refresh:hover { background: var(--teal); color: #fff; }
+  nav button.refresh { font-family: inherit; }
+  nav .refresh[disabled] { opacity: .75; cursor: default; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .summary { background: var(--card); border: 1px solid var(--line);
+             border-left: 4px solid var(--teal); border-radius: 12px;
+             padding: 14px 18px; font-size: 15px; line-height: 1.5; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+          gap: 12px; margin: 20px 0 8px; }
+  .kpi { background: var(--card); border: 1.5px solid var(--teal);
+         border-radius: 12px; padding: 12px 16px; }
+  .kpi .n { font-size: 24px; font-weight: 700; color: var(--teal);
+            font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 11px; color: var(--muted); text-transform: uppercase;
+            letter-spacing: .06em; }
+  h2 { font-size: 15px; margin: 32px 0 12px; text-transform: uppercase;
+       letter-spacing: .05em; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+           gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line);
+          border-radius: 12px; padding: 14px 16px; }
+  .card .meta { font-size: 12px; margin-bottom: 6px; }
+  .badge { display: inline-block; border-radius: 10px; padding: 1px 9px;
+           font-size: 11px; font-weight: 600; color: #fff; }
+  .chip { display: inline-block; background: var(--teal-fill); border-radius: 10px;
+          padding: 1px 9px; font-size: 11px; color: var(--teal-deep);
+          margin-left: 6px; }
+  .chip.new { background: #e4efe2; color: #3c6b35; font-weight: 700; }
+  .card h3 { font-size: 15px; margin: 0 0 6px; }
+  .card h3 a, td a, .comp-block a { color: var(--teal-deep); text-decoration: none; }
+  .card p { font-size: 13px; color: #444; margin: 0; line-height: 1.45; }
+  .card p + p { margin-top: 6px; }
+  .card p strong { color: var(--ink); }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+             margin: 0 0 10px; font-size: 13px; }
+  .filters select, .filters input { font: inherit; font-size: 13px;
+             padding: 4px 8px; border: 1px solid var(--line);
+             border-radius: 8px; background: var(--card); color: var(--ink); }
+  .filters label { color: var(--muted); display: flex; gap: 6px;
+                   align-items: center; }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+          font-size: 13px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #efeadd;
+           vertical-align: top; }
+  th { background: #fbf9f3; font-size: 11px; color: var(--muted);
+       text-transform: uppercase; letter-spacing: .06em; }
+  tr:last-child td { border-bottom: none; }
+  .comp-block { background: var(--card); border: 1px solid var(--line);
+                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .comp-block h3 { margin: 0 0 8px; font-size: 15px; }
+  .comp-block ul { margin: 6px 0; padding-left: 20px; font-size: 13px;
+                   line-height: 1.6; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .removed { color: var(--red); }
+  .chart { background: var(--card); border: 1px solid var(--line);
+           border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .legend { font-size: 12px; margin-top: 6px; }
+  .legend span { margin-right: 14px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 5px;
+         margin-right: 4px; }
+  footer { margin-top: 40px; color: #a39d8d; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap"><nav><a class="brand" href="index.html">Compete Monitor</a><a href="index.html">Overview</a><a href="competitor-aws.html">AWS</a><a href="competitor-anthropic.html">Anthropic</a><a href="competitor-coursera.html">Coursera</a><a href="competitor-google.html">Google</a><a href="competitor-industry.html">Industry</a><a href="competitor-linkedin-learning.html">LinkedIn Learning</a><a href="competitor-openai.html">OpenAI</a><a href="competitor-salesforce-trailhead.html">Salesforce Trailhead</a><a href="competitor-servicenow-university.html" class="active">ServiceNow University</a><a href="competitor-udemy.html">Udemy</a><a class="refresh" href="https://github.com/amyge0510/ASN-Compete-Dashboard/actions/workflows/monitor.yml" target="_blank" rel="noopener" title="Runs a fresh check (takes ~15 minutes); refresh this page afterwards">&#8635; Refresh data</a></nav>
+<h1>ServiceNow University</h1><div class="sub">Insight history for all runs; catalog changes shown for the last 30 days.</div><h2>Insight history</h2><table><tr><th>Date</th><th></th><th>Category</th><th>Headline</th></tr><tr data-competitor="ServiceNow University" data-category="product_update" data-sig="medium" data-date="2026-08-05"><td>2026-08-05<span class="chip new">NEW</span></td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://servicenow.swoogo.com/AILearningDays2026/session/4102670/ai-native-learner-first-what%27s-new-at-servicenow-university">ServiceNow University previews AI-guided learning and simulations</a></td></tr><tr data-competitor="ServiceNow University" data-category="other" data-sig="medium" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>other</td><td><a href="https://www.servicenow.com/community/training-and-certifications/regarding-retake-exam/td-p/3557378">ServiceNow pauses Personal Developer Instance (PDI) actions due to availability issues</a></td></tr><tr data-competitor="ServiceNow University" data-category="product_update" data-sig="high" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>product_update</td><td><a href="https://www.servicenow.com/docs/r/store-release-notes/store-rn-impact-impact.html">ServiceNow adds in‑product learning recommendations to Impact app</a></td></tr><tr data-competitor="ServiceNow University" data-category="product_update" data-sig="high" data-date="2026-08-05"><td>2026-08-05</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>product_update</td><td><a href="https://www.servicenow.com/docs/r/store-release-notes/store-rn-hr-learning-core.html">Learning Core adds ‘Learning Skill Sensing’ and UX/theming updates</a></td></tr><tr data-competitor="ServiceNow University" data-category="certification" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>certification</td><td><a href="https://www.servicenow.com/events/world-forum/sydney.html">ServiceNow to offer complimentary onsite certifications at World Forum Sydney</a></td></tr><tr data-competitor="ServiceNow University" data-category="other" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>other</td><td><a href="https://servicenow.swoogo.com/AILearningDays2026">ServiceNow opens free, virtual AI Learning Days with hands‑on challenges</a></td></tr><tr data-competitor="ServiceNow University" data-category="other" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>other</td><td><a href="https://www.servicenow.com/community/japan-blog/%E7%84%A1%E6%96%99-%E3%82%AA%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3-servicenow-university-ai-learning-days-2026%E3%82%92%E9%96%8B%E5%82%AC%E3%81%97%E3%81%BE%E3%81%99/ba-p/3561646">ServiceNow localizes AI Learning Days for Japan with badges and points</a></td></tr><tr data-competitor="ServiceNow University" data-category="new_course" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://nowlearning.servicenow.com/kb?id=kb_article_view&amp;sysparm_article=KB0010279">ServiceNow adds Agentic Workflow modules across procurement use cases</a></td></tr><tr data-competitor="ServiceNow University" data-category="other" data-sig="medium" data-date="2026-08-04"><td>2026-08-04</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>other</td><td><a href="https://www.servicenow.com/community/servicenow-university-community/eb-p/sig-now-learning-poweroccasion-board">ServiceNow University adds Office Hours Live coaching with Frances Frei</a></td></tr></table><h2>Catalog changes (30d)</h2><div class="comp-block"><p class="muted">No catalog changes this period.</p></div><h2>Catalog trend</h2><p class="muted">No history yet — trends appear after two runs.</p><h2>Catalog</h2><table><tr><th>Source</th><th>Active items</th></tr><tr><td colspan="2" class="muted">No catalog tracked.</td></tr></table>
+<footer>Generated 2026-08-05 16:45 UTC by the compete-monitor pipeline. Regenerate with <code>python -m scraper site</code>.</footer></div>
+</body>
+</html>
