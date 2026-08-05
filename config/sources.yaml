@@ -86,6 +86,33 @@ sources:
       Academy runs on the Gradual platform; the content sitemap (~220 URLs)
       covers courses, collections, videos, and blogs under /public/.
 
+  # ── NVIDIA DLI ───────────────────────────────────────────────────────
+  - name: nvidia-dli-training
+    type: course_catalog
+    url: https://www.nvidia.com/en-us/training/
+    competitor: NVIDIA Deep Learning Institute
+    notes: >
+      NVIDIA Deep Learning Institute training landing page; lists workshops,
+      instructor-led courses, and self-paced offerings. Monitor for new course
+      launches and training announcements.
+
+  - name: nvidia-dli-certification
+    type: course_catalog
+    url: https://www.nvidia.com/en-us/learn/certification/
+    competitor: NVIDIA Deep Learning Institute
+    notes: >
+      Certification program page — monitors certification offerings, requirements,
+      and updated exam info.
+
+  - name: nvidia-dli-find-training
+    type: course_catalog
+    url: https://www.nvidia.com/en-us/training/find-training/
+    competitor: NVIDIA Deep Learning Institute
+    notes: >
+      Search/find-training portal for partner and public offerings; may be
+      JavaScript-rendered — set `render: true` if catalogs are empty or the
+      scraper cannot discover items.
+
   # ── Salesforce ─────────────────────────────────────────────────────────
   - name: salesforce-blog
     type: rss
@@ -106,6 +133,22 @@ sources:
       of any competitor. ~18 MB download, hence the raised sitemap size cap.
       First run must seed with --no-analyze.
 
+# Competitor priority tiers — drive the analyst's significance calibration
+# and the canonical names every insight must use (variants like "OpenAI
+# Academy" or "Google Cloud Skills Boost" are mapped onto these).
+competitors:
+  high_priority:        # direct compete targets: bar for "high" is lower
+    - Salesforce Trailhead
+    - AWS
+    - Google
+  medium_priority:      # watch closely, but reserve "high" for major moves
+    - Anthropic
+    - OpenAI
+    - Coursera
+    - Udemy
+    - LinkedIn Learning
+    - ServiceNow University
+    - NVIDIA Deep Learning Institute
 
 # Search-based discovery: for updates posted outside the configured feeds.
 # Each target runs a web search (via Claude's server-side web_search tool),
@@ -113,10 +156,7 @@ sources:
 # the same dedup as everything else.
 discovery:
   enabled: true
-  # Ceiling, and the fallback for the very first run. Normally the window is
-  # the gap since the previous run, so discovery tracks your actual cadence
-  # instead of re-finding the same stories in a wide fixed window.
-  lookback_days: 14
+  lookback_days: 45
   results_per_target: 8       # articles surfaced per target per run
   max_searches: 8             # web-search calls the model may spend per target
   # Syndication mirrors — the model is told to find the original article

@@ -153,6 +153,7 @@ competitors:
     - Udemy
     - LinkedIn Learning
     - ServiceNow University
+    - NVIDIA Deep Learning Institute
   name_mappings:
     - "'OpenAI Academy' -> OpenAI"
     - "'Google Cloud Skills Boost' / 'Google Skills' -> Google"
