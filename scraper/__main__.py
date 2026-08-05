@@ -37,6 +37,9 @@ def main() -> int:
                         choices=["run", "check-sources", "site", "backfill"])
     parser.add_argument("--days", type=int, default=45,
                         help="backfill window in days (backfill command only)")
+    parser.add_argument("--force", action="store_true",
+                        help="backfill: re-analyze items already reported "
+                             "(creates duplicate insights; for prompt testing)")
     parser.add_argument("--no-analyze", action="store_true",
                         help="ingest and update the knowledge base without calling the LLM")
     parser.add_argument("--no-discovery", action="store_true",
@@ -59,7 +62,7 @@ def main() -> int:
 
     if args.command == "backfill":
         from scraper.pipeline import backfill
-        backfill(days=args.days)
+        backfill(days=args.days, force=args.force)
         return 0
 
     if args.command == "site":

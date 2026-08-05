@@ -279,6 +279,15 @@ class Store:
         self.conn.commit()
         return now
 
+    def urls_with_insights(self) -> set[str]:
+        """URLs that have already produced an insight in some run.
+
+        Backfill uses this to stay idempotent: an item that has been
+        interpreted once must not be re-reported as news on a later run.
+        """
+        return {row[0] for row in
+                self.conn.execute("SELECT url FROM insights WHERE url != ''")}
+
     def record_course_counts(self, run_at: str | None = None) -> None:
         """Snapshot current per-competitor catalog sizes for trend history."""
         run_at = run_at or _now()

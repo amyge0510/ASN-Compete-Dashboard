@@ -231,22 +231,32 @@ def published_within(published: str, days: int) -> bool:
     return parsed >= datetime.now(timezone.utc) - timedelta(days=days)
 
 
-def backfill(days: int = 45) -> None:
-    """One-time cold-start fix: analyze the last N days of feed items that
-    the seed marked as baseline, so competitor pages open with history
-    instead of starting empty. Idempotent-ish: re-running re-analyzes the
-    same window (insight unique keys dedupe exact repeats per run)."""
+def backfill(days: int = 45, force: bool = False) -> None:
+    """Cold-start fix: analyze the last N days of feed items that the seed
+    marked as baseline, so competitor pages open with history instead of
+    starting empty.
+
+    Unlike a normal run this ignores the seen-items flag — that is the whole
+    point, since the seed marks items seen without analyzing them. It does
+    skip items that have already produced an insight, so re-running is
+    idempotent and never re-reports the same window as fresh news.
+
+    `force=True` re-analyzes everything in the window regardless. Use it when
+    deliberately re-testing an analysis.yaml change; expect duplicate
+    insights on the dashboard afterwards."""
     store = Store()
     config = load_config()
     run_started_at = now_iso()
 
+    already_reported = set() if force else store.urls_with_insights()
     items = []
     for source in config["sources"]:
         if source["type"] != "rss":
             continue
         try:
             recent = [i for i in ingest_feed(source)
-                      if published_within(i.published, days)]
+                      if published_within(i.published, days)
+                      and i.url not in already_reported]
             logger.info("[backfill:%s] %d items within %d days",
                         source["name"], len(recent), days)
             items.extend(recent)
@@ -254,7 +264,9 @@ def backfill(days: int = 45) -> None:
             logger.error("[backfill:%s] failed: %s", source["name"], e)
 
     if not items:
-        logger.info("Backfill found no dated items in the window.")
+        logger.info("Backfill found nothing new in the window — every dated "
+                    "item has already been reported. Use --force to "
+                    "re-analyze anyway.")
         return
 
     logger.info("Backfill: analyzing %d items from the last %d days",
