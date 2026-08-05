@@ -172,6 +172,7 @@ def _brand() -> str:
 def _nav(competitors: list[str], active: str) -> str:
     links = [("Overview", "index.html")]
     links += [(c, f"competitor-{slugify(c)}.html") for c in competitors]
+    links += [("Source health", "sources.html")]
     active_attr = ' class="active"'
     items = "".join(
         f'<a href="{href}"{active_attr if href == active else ""}>'
@@ -547,13 +548,70 @@ def _competitor_page(store: Store, competitor: str, data: dict,
     return body
 
 
+_HEALTH_VERDICT = {
+    "ok": ("Working", "This source works with the existing pipeline. "
+                      "No code needed."),
+    "empty": ("Returns nothing", "The page was reached but no items were "
+              "found. Usually the page needs JavaScript to show its list, or "
+              "the CSS selector no longer matches. Try a different URL first; "
+              "if that fails this needs a custom reader."),
+    "failed": ("Cannot be read", "The fetch itself failed — the site blocked "
+               "us, moved, or is down. Check the detail below. If it is a "
+               "403 the site refuses automated access and no config change "
+               "will fix it."),
+}
+
+
+def _health_page(store: Store) -> str:
+    rows = store.source_health()
+    if not rows:
+        return ("<h2>Source health</h2><p class=\"muted\">No run has recorded "
+                "source health yet. It appears after the next run.</p>")
+
+    counts = {"ok": 0, "empty": 0, "failed": 0}
+    for r in rows:
+        counts[r[2]] = counts.get(r[2], 0) + 1
+
+    kpis = "".join(
+        f'<div class="kpi"><div class="n">{n}</div><div class="l">{label}</div></div>'
+        for n, label in [(counts.get("ok", 0), "working"),
+                         (counts.get("empty", 0), "returning nothing"),
+                         (counts.get("failed", 0), "failing")])
+
+    body = []
+    for name, stype, status, count, detail, checked_at, last_ok in rows:
+        verdict, guidance = _HEALTH_VERDICT.get(status, ("Unknown", ""))
+        colour = {"ok": "#2e7d4f", "empty": "#a8722a", "failed": "#b3402e"}[status]
+        last = f"last worked {escape(last_ok[:10])}" if last_ok else "never worked"
+        body.append(
+            f'<tr><td><code>{escape(name)}</code></td>'
+            f'<td>{escape(stype)}</td>'
+            f'<td><span class="sig" style="background:{colour}">'
+            f'{escape(verdict)}</span></td>'
+            f'<td>{count}</td>'
+            f'<td class="muted">{escape(detail or guidance)}<br>'
+            f'<small>checked {escape(checked_at[:16].replace("T", " "))} · '
+            f'{escape(last)}</small></td></tr>')
+
+    return (
+        "<h2>Source health</h2>"
+        "<p class=\"muted\">Whether each configured source can actually be read "
+        "by the pipeline as it stands. Anything not marked <b>Working</b> needs "
+        "attention — see RUNBOOK.md.</p>"
+        f'<div class="kpis">{kpis}</div>'
+        "<table><thead><tr><th>Source</th><th>Type</th><th>Verdict</th>"
+        "<th>Items</th><th>What this means</th></tr></thead><tbody>"
+        + "".join(body) + "</tbody></table>")
+
+
 def export_site(store: Store, site_dir: Path = SITE_DIR,
                 days: int = LOOKBACK_DAYS) -> Path:
     data = _gather(store, days)
     competitors = data["competitors"]
     site_dir.mkdir(exist_ok=True)
 
-    pages = {"index.html": ("Overview", _index_page(data, days))}
+    pages = {"index.html": ("Overview", _index_page(data, days)),
+             "sources.html": ("Source health", _health_page(store))}
     for competitor in competitors:
         pages[f"competitor-{slugify(competitor)}.html"] = (
             competitor, _competitor_page(store, competitor, data, days))

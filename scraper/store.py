@@ -70,6 +70,20 @@ CREATE TABLE IF NOT EXISTS runs (
     summary        TEXT NOT NULL
 );
 
+-- Per-source outcome of the most recent run that touched it. Lets the site
+-- show whether a source is actually working, so silent rot (a moved feed, a
+-- selector that stopped matching) is visible instead of being buried in a
+-- workflow log nobody reads.
+CREATE TABLE IF NOT EXISTS source_health (
+    name        TEXT PRIMARY KEY,
+    type        TEXT NOT NULL,
+    status      TEXT NOT NULL,      -- ok | empty | failed
+    item_count  INTEGER NOT NULL DEFAULT 0,
+    detail      TEXT NOT NULL DEFAULT '',
+    checked_at  TEXT NOT NULL,
+    last_ok_at  TEXT
+);
+
 CREATE TABLE IF NOT EXISTS course_count_snapshots (
     run_at         TEXT NOT NULL,      -- catalog size per competitor per run,
     competitor     TEXT NOT NULL,      -- kept as history so the site can draw
@@ -368,6 +382,38 @@ class Store:
         """
         return {row[0] for row in
                 self.conn.execute("SELECT url FROM insights WHERE url != ''")}
+
+    def record_source_health(self, name: str, stype: str, status: str,
+                             item_count: int = 0, detail: str = "") -> None:
+        """Record how a source behaved this run, preserving last_ok_at."""
+        now = _now()
+        prior = self.conn.execute(
+            "SELECT last_ok_at FROM source_health WHERE name = ?", (name,)
+        ).fetchone()
+        last_ok = now if status == "ok" else (prior[0] if prior else None)
+        self.conn.execute(
+            "INSERT INTO source_health (name, type, status, item_count, detail, "
+            "checked_at, last_ok_at) VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET type=excluded.type, "
+            "status=excluded.status, item_count=excluded.item_count, "
+            "detail=excluded.detail, checked_at=excluded.checked_at, "
+            "last_ok_at=excluded.last_ok_at",
+            (name, stype, status, item_count, detail[:300], now, last_ok))
+        self.conn.commit()
+
+    def source_health(self) -> list[tuple]:
+        """(name, type, status, item_count, detail, checked_at, last_ok_at)."""
+        return list(self.conn.execute(
+            "SELECT name, type, status, item_count, detail, checked_at, "
+            "last_ok_at FROM source_health ORDER BY "
+            "CASE status WHEN 'failed' THEN 0 WHEN 'empty' THEN 1 ELSE 2 END, name"))
+
+    def prune_source_health(self, keep: set[str]) -> None:
+        """Drop rows for sources no longer in the config."""
+        for (name,) in list(self.conn.execute("SELECT name FROM source_health")):
+            if name not in keep:
+                self.conn.execute("DELETE FROM source_health WHERE name = ?", (name,))
+        self.conn.commit()
 
     def record_course_counts(self, run_at: str | None = None) -> None:
         """Snapshot current per-competitor catalog sizes for trend history."""

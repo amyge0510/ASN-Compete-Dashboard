@@ -34,9 +34,10 @@ def load_dotenv(path: str = ".env") -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="scraper")
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "check-sources", "site", "backfill", "validate"])
+                        choices=["run", "check-sources", "site", "backfill", "validate", "probe"])
     parser.add_argument("--days", type=int, default=45,
                         help="backfill window in days (backfill command only)")
+    parser.add_argument("--url", help="URL to test (probe command only)")
     parser.add_argument("--force", action="store_true",
                         help="backfill: re-analyze items already reported "
                              "(creates duplicate insights; for prompt testing)")
@@ -59,6 +60,13 @@ def main() -> int:
 
     if args.command == "check-sources":
         return 1 if check_sources() else 0
+
+    if args.command == "probe":
+        if not args.url:
+            print("Usage: python -m scraper probe --url https://example.com/courses")
+            return 2
+        from scraper.probe import report
+        return report(args.url)
 
     if args.command == "validate":
         from scraper.config import validate

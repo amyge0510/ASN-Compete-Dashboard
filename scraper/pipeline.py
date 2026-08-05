@@ -83,26 +83,35 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False) -> None:
     catalog_snapshots: list[tuple[str, list]] = []
 
     for source in config["sources"]:
+        name, stype = source["name"], source["type"]
         try:
-            if source["type"] == "rss":
+            if stype == "rss":
                 items = ingest_feed(source)
-                logger.info("[%s] %d feed items", source["name"], len(items))
+                logger.info("[%s] %d feed items", name, len(items))
                 all_items.extend(items)
-            elif source["type"] in _CATALOG_INGESTERS:
-                courses = _CATALOG_INGESTERS[source["type"]](source)
-                added, removed = store.diff_courses(source["name"], courses,
-                                                    record=False)
+                store.record_source_health(
+                    name, stype, "ok" if items else "empty", len(items),
+                    "" if items else "feed returned 0 items")
+            elif stype in _CATALOG_INGESTERS:
+                courses = _CATALOG_INGESTERS[stype](source)
+                added, removed = store.diff_courses(name, courses, record=False)
                 logger.info("[%s] %d courses (+%d new, -%d removed)",
-                            source["name"], len(courses), len(added), len(removed))
-                catalog_snapshots.append((source["name"], courses))
+                            name, len(courses), len(added), len(removed))
+                catalog_snapshots.append((name, courses))
                 added_courses.extend(added)
                 if removed:
-                    removed_titles[source["name"]] = removed
+                    removed_titles[name] = removed
+                store.record_source_health(
+                    name, stype, "ok" if courses else "empty", len(courses),
+                    "" if courses else "catalog returned 0 items")
             else:
-                logger.warning("[%s] unknown source type %r",
-                               source["name"], source["type"])
+                logger.warning("[%s] unknown source type %r", name, stype)
+                store.record_source_health(name, stype, "failed", 0,
+                                           f"unknown source type {stype!r}")
         except Exception as e:
-            logger.error("[%s] ingestion failed: %s", source["name"], e)
+            logger.error("[%s] ingestion failed: %s", name, e)
+            store.record_source_health(name, stype, "failed", 0, str(e))
+    store.prune_source_health({s["name"] for s in config["sources"]})
 
     # How far back this run should look: the gap since the previous run, so
     # the window tracks the actual cadence instead of a fixed guess.

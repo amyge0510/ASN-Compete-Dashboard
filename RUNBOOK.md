@@ -35,6 +35,26 @@ insights — that is the system working, not failing.
 
 ## Adding a competitor or a source
 
+**Step 0 — test the URL first.** Before editing anything, find out whether
+the pipeline can even read the page. No terminal needed:
+
+**Actions → config-check → Run workflow → paste the URL into "Optional: a URL
+to test" → Run workflow.** Open the run, expand *"Can the pipeline read this
+URL?"*, and read the verdict:
+
+| Verdict | Meaning |
+|---|---|
+| `READY` | Paste it into `sources.yaml` with the type it names. Done. |
+| `NEEDS A SELECTOR` | Server-rendered list — usable, but someone must pick a CSS `item_selector`. |
+| `NEEDS CUSTOM CODE` | JavaScript-rendered or a landing page. Config cannot fix this; it needs an engineer. |
+| `BLOCKED` | The site refuses automated access. Nothing will fix it — look for a feed instead. |
+| `UNREACHABLE` | Could not connect. Often the network, not the site. Check the URL opens in a browser. |
+
+It also tells you when a page **declares an RSS feed** — always prefer the
+feed over scraping the page.
+
+Locally the same check is `python -m scraper probe --url <URL>`.
+
 **Step 1 — find the right URL.** In order of preference:
 
 1. **An RSS feed** (usually `/feed/`, `/rss/`, or linked in the page footer).
@@ -69,6 +89,22 @@ python -m scraper check-sources   # does every source actually return data?
 ```
 
 ---
+
+## Is a source still working? Check the dashboard
+
+The dashboard has a **Source health** tab. Every source is listed with a
+plain verdict:
+
+- **Working** — read fine on the last run.
+- **Returns nothing** — reached, but no items found. The URL moved, the page
+  now needs JavaScript, or the selector stopped matching.
+- **Cannot be read** — the fetch failed. The detail column says why.
+
+Each row shows when it last worked. **A source that has not worked in weeks
+is rot, not weather** — fix it or delete it.
+
+This is the page to glance at monthly. It is the only place silent decay
+becomes visible.
 
 ## When a source returns nothing
 
