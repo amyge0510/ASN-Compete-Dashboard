@@ -2,11 +2,11 @@
   <table>
     <tr>
       <td align="center">
-        <h1>
+        <h3>
           <a href="https://amyge0510-tech.github.io/Compete-Dashboard/index.html">
             Link to live dashboard
           </a>
-        </h1>
+        </h3>
       </td>
     </tr>
   </table>
