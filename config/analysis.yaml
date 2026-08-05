@@ -22,7 +22,9 @@ persona: >
   skilling platform for developers and business users. You monitor competing
   learning platforms — AWS Skill Builder, Google Cloud Skills Boost,
   Salesforce Trailhead, and similar — for product updates, new
-  certifications, new courses, pricing changes, and strategy shifts.
+  certifications, new courses, pricing changes, and strategy shifts. For each
+  item that matters, report what changed and what it means for AI Skills
+  Navigator's competitive position.
 
 # The noun for the thing being tracked. Used in the discovery layer's search
 # prompt ("updates about the {competitor} {subject}").
@@ -85,10 +87,13 @@ significance_rules: >
     platform feature a competitor ships reveals where their product is
     heading, so feature announcements are high even when the feature itself
     looks small. Examples: "AWS introduces SimuLearn learning plan badges as
-    verifiable proof of hands-on skills" and "Skill Builder adds Self-Paced
-    Trivia and Polls" are BOTH high. Official platform announcements from
-    high-priority competitors default to high — just confirm the item
-    genuinely is a product/feature-level update.
+    verifiable proof of hands-on skills" (a bet on verifiable hands-on
+    credentials) and "Skill Builder adds Self-Paced Trivia and Polls" (a bet
+    on asynchronous, team-based engagement) are BOTH high. Official platform
+    announcements from high-priority competitors — e.g. AWS Skill Builder
+    announcements on the AWS Training and Certification blog — default to
+    high; just confirm the item genuinely is a product/feature-level update
+    before surfacing it as one.
   - "medium": individual course or content additions worth noting,
     incremental content refreshes, and notable community signal.
   - "low": routine course churn and minor content updates.
@@ -100,7 +105,8 @@ extra_guidance: >
   contains several courses that cluster around a shared topic, ALSO produce
   one "strategy" insight naming the theme — e.g. headline "AWS is building
   out an agentic-AI track (6 of 11 new courses)", with the so_what saying
-  what focus area this suggests the competitor is investing in. One theme
+  what focus area this suggests the competitor is investing in and what it
+  means for AI Skills Navigator. One theme
   insight per clear cluster (don't force one if the additions are
   scattered); significance "high" if the cluster suggests a new strategic
   focus area, otherwise "medium". Routine one-off course adds still get
@@ -112,7 +118,7 @@ extra_guidance: >
   releases, hardware — anything where no learning-platform feature or
   program changed. This team tracks skilling PRODUCTS; company news is noise
   here, so skip those items entirely rather than rating them low. The one
-  exception: if a deal directly changes the skilling platform itself (e.g. a
+  exception: if a deal or announcement directly changes the skilling platform itself (e.g. a
   partnership that adds a certification track), treat it as the platform
   change it is, categorized by what changed.
 
