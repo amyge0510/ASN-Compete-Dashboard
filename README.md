@@ -1,3 +1,17 @@
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <h1>
+          <a href="https://amyge0510-tech.github.io/Compete-Dashboard/index.html">
+            Link to live dashboard
+          </a>
+        </h1>
+      </td>
+    </tr>
+  </table>
+</div>
+
 # microsoft-web-scraper
 
 Competitive-intelligence pipeline for the **AI Skills Navigator Compete team**.
