@@ -13,6 +13,7 @@ It also looks for a declared RSS feed and a sitemap, because the best outcome
 is usually "don't scrape that page, use the feed it links to."
 """
 import logging
+import os
 import re
 from urllib.parse import urljoin, urlsplit
 
@@ -200,6 +201,27 @@ def copilot_prompt(verdict: str, url: str, source_type: str | None = None,
     return None
 
 
+def _step_summary(url: str, headline: str, notes: list[str],
+                  prompt: str | None, next_step: str) -> None:
+    """Also write the verdict to the GitHub Actions run summary.
+
+    Buried log output is no use to a non-technical owner — this puts the
+    verdict and the copy-paste prompt on the run's front page.
+    """
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    lines = [f"## Can the pipeline read this URL?", "",
+             f"`{url}`", "", f"### {headline}", ""]
+    lines += [f"- {n.strip()}" for n in notes]
+    lines += ["", f"**Next step:** {next_step}", ""]
+    if prompt:
+        lines += ["<details open><summary>Copy this into GitHub Copilot Chat"
+                  "</summary>", "", "```text", prompt, "```", "", "</details>"]
+    with open(path, "a", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+
 def report(url: str) -> int:
     """Print a plain-English verdict. Returns 0 if usable as-is."""
     verdict, notes = probe(url)
@@ -227,6 +249,19 @@ def report(url: str) -> int:
             stype, feed = "rss", note.strip().split()[0]
 
     prompt = copilot_prompt(verdict, url, stype, feed)
+    next_step = {
+        "READY": "paste the prompt below into GitHub Copilot Chat.",
+        "SELECTOR": "paste the prompt below into GitHub Copilot Chat.",
+        "CUSTOM": "stop here — this page cannot be added from config alone. "
+                  "Look for an RSS feed or sitemap on the same site and test "
+                  "that instead.",
+        "BLOCKED": "stop here — the site refuses automated access and no "
+                   "config change will help. Look for an RSS feed or sitemap "
+                   "instead.",
+        "UNREACHABLE": "check the URL opens in a browser, then run this again.",
+    }[verdict]
+    _step_summary(url, headline, notes, prompt, next_step)
+
     if prompt:
         print("\n" + "=" * 70)
         print("NEXT STEP — paste everything between the lines into GitHub")

@@ -43,14 +43,15 @@ jobs:
 
       # Lets a non-technical owner answer "can we monitor this page?" from
       # the Actions UI: Run workflow -> paste a URL -> read the verdict.
+      # `|| true` on purpose: probe exits non-zero for anything that is not
+      # READY, and a red X on a working probe is a misleading signal for a
+      # non-technical owner. The verdict is the output, not the exit code.
       - name: Can the pipeline read this URL?
         if: inputs.probe_url != ''
-        continue-on-error: true
-        run: python -m scraper probe --url "${{ inputs.probe_url }}"
+        run: python -m scraper probe --url "${{ inputs.probe_url }}" || true
 
       # Reachability: does every source actually return anything today?
       # Allowed to fail — a competitor's site being briefly down should not
       # look like a broken config — but the result is visible in the log.
       - name: Check every source is reachable
-        continue-on-error: true
-        run: python -m scraper check-sources
+        run: python -m scraper check-sources || true

@@ -39,8 +39,8 @@ insights — that is the system working, not failing.
 the pipeline can even read the page. No terminal needed:
 
 **Actions → config-check → Run workflow → paste the URL into "Optional: a URL
-to test" → Run workflow.** Open the run, expand *"Can the pipeline read this
-URL?"*, and read the verdict:
+to test" → Run workflow.** When it finishes, the verdict appears **on the run's
+Summary page** — you do not need to open any logs. It looks like this:
 
 | Verdict | Meaning |
 |---|---|
@@ -53,8 +53,8 @@ URL?"*, and read the verdict:
 It also tells you when a page **declares an RSS feed** — always prefer the
 feed over scraping the page.
 
-**For `READY` and `NEEDS A SELECTOR`, the output ends with a ready-made prompt.**
-Copy everything between the `====` lines, replace the
+**For `READY` and `NEEDS A SELECTOR`, the summary includes a ready-made prompt.**
+Copy the block under *"Copy this into GitHub Copilot Chat"*, replace the
 `<REPLACE WITH THE COMPETITOR'S NAME>` placeholder, and paste it into GitHub
 Copilot Chat with this repository open. The prompt already tells Copilot which
 files to edit, to add the competitor to the tier list in `analysis.yaml`, not
