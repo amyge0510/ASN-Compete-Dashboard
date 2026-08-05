@@ -34,7 +34,7 @@ def load_dotenv(path: str = ".env") -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="scraper")
     parser.add_argument("command", nargs="?", default="run",
-                        choices=["run", "check-sources", "site", "backfill"])
+                        choices=["run", "check-sources", "site", "backfill", "validate"])
     parser.add_argument("--days", type=int, default=45,
                         help="backfill window in days (backfill command only)")
     parser.add_argument("--force", action="store_true",
@@ -59,6 +59,19 @@ def main() -> int:
 
     if args.command == "check-sources":
         return 1 if check_sources() else 0
+
+    if args.command == "validate":
+        from scraper.config import validate
+        errors, warnings = validate()
+        for w in warnings:
+            print(f"WARNING  {w}")
+        for e in errors:
+            print(f"ERROR    {e}")
+        if errors:
+            print(f"\n{len(errors)} error(s) — fix these before the next run.")
+            return 1
+        print(f"\nConfig OK ({len(warnings)} warning(s)).")
+        return 0
 
     if args.command == "backfill":
         from scraper.pipeline import backfill

@@ -49,6 +49,12 @@ jobs:
 
       # Restore/save are split (not the combined actions/cache) so a FAILED
       # run never uploads its partially-written DB as next week's baseline.
+      # Cheap, no-network gate: a broken config should fail here in seconds
+      # rather than halfway through a 40-minute run that has already spent
+      # money on the LLM.
+      - name: Validate config
+        run: python -m scraper validate
+
       - name: Restore knowledge base
         uses: actions/cache/restore@v4
         with:

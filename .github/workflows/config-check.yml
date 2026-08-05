@@ -1,0 +1,44 @@
+# Guard rail for config edits.
+#
+# config/sources.yaml and config/analysis.yaml are the two files a
+# non-engineer is expected to edit. A mistake in either breaks the weekly
+# run — sometimes loudly (bad YAML), sometimes silently (a competitor that
+# is never tiered, a selector that matches nothing). This runs on every
+# change to them and emails whoever pushed if something is wrong.
+#
+# It costs nothing: no API key, no LLM calls. check-sources does make
+# network requests, so it reports feeds that have moved or gone empty.
+
+name: config-check
+
+on:
+  push:
+    paths:
+      - "config/**"
+      - ".github/workflows/config-check.yml"
+  pull_request:
+    paths:
+      - "config/**"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # Structure: required keys, known source types, tiers that match.
+      - name: Validate config files
+        run: python -m scraper validate
+
+      # Reachability: does every source actually return anything today?
+      # Allowed to fail — a competitor's site being briefly down should not
+      # look like a broken config — but the result is visible in the log.
+      - name: Check every source is reachable
+        continue-on-error: true
+        run: python -m scraper check-sources

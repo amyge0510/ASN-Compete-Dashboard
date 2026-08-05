@@ -70,3 +70,106 @@ def load_analysis(path: str | Path = ANALYSIS_PATH) -> dict:
         return config
     config.update({k: v for k, v in loaded.items() if v is not None})
     return config
+
+
+# ── Validation ────────────────────────────────────────────────────────────
+# Config edits are the main way a non-author breaks this pipeline: a stray
+# indent in YAML, a source type that does not exist, a competitor named in
+# sources.yaml but not tiered in analysis.yaml. All of those either crash the
+# weekly run or, worse, degrade it silently. `python -m scraper validate`
+# catches them in seconds with no network and no API spend.
+
+KNOWN_SOURCE_TYPES = {
+    "rss", "course_catalog", "sitemap",
+    "google_skills_catalog", "skillbuilder_catalog",
+}
+SIGNIFICANCE_LEVELS = {"low", "medium", "high"}
+
+
+def validate(sources_path: str | Path = SOURCES_PATH,
+             analysis_path: str | Path = ANALYSIS_PATH) -> tuple[list[str], list[str]]:
+    """Return (errors, warnings). Errors mean the pipeline will misbehave."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    try:
+        sources = load_sources(sources_path)
+    except FileNotFoundError:
+        return ([f"{sources_path} not found"], [])
+    except yaml.YAMLError as e:
+        return ([f"{sources_path} is not valid YAML: {e}"], [])
+    if not isinstance(sources, dict):
+        return ([f"{sources_path} should be a mapping, got {type(sources).__name__}"], [])
+
+    try:
+        analysis = load_analysis(analysis_path)
+    except yaml.YAMLError as e:
+        return ([f"{analysis_path} is not valid YAML: {e}"], [])
+
+    entries = sources.get("sources")
+    if not entries:
+        errors.append("sources.yaml has no `sources:` entries")
+        entries = []
+
+    seen_names = set()
+    competitors_used = set()
+    for n, src in enumerate(entries, 1):
+        if not isinstance(src, dict):
+            errors.append(f"source #{n} is not a mapping")
+            continue
+        label = src.get("name", f"#{n}")
+        for key in ("name", "type", "url", "competitor"):
+            if not src.get(key):
+                errors.append(f"source {label}: missing `{key}`")
+        if src.get("name") in seen_names:
+            errors.append(f"source {label}: duplicate name")
+        seen_names.add(src.get("name"))
+        if src.get("competitor"):
+            competitors_used.add(src["competitor"])
+        stype = src.get("type")
+        if stype and stype not in KNOWN_SOURCE_TYPES:
+            errors.append(f"source {label}: unknown type {stype!r} "
+                          f"(valid: {', '.join(sorted(KNOWN_SOURCE_TYPES))})")
+        if stype == "course_catalog" and not src.get("item_selector"):
+            warnings.append(f"source {label}: course_catalog without `item_selector` "
+                            "matches every link on the page — expect junk items")
+        if src.get("render"):
+            warnings.append(f"source {label}: `render: true` needs Playwright, which "
+                            "the GitHub Actions workflow does not install — this "
+                            "source will fail in the hosted run")
+
+    discovery = sources.get("discovery") or {}
+    if discovery.get("enabled"):
+        for n, target in enumerate(discovery.get("targets") or [], 1):
+            if not isinstance(target, dict) or not target.get("competitor") \
+                    or not target.get("query"):
+                errors.append(f"discovery target #{n}: needs `competitor` and `query`")
+            elif target.get("competitor"):
+                competitors_used.add(target["competitor"])
+
+    for key in ("persona", "categories", "significance_rules"):
+        if not analysis.get(key):
+            errors.append(f"analysis.yaml: `{key}` is required")
+
+    categories = set(analysis.get("categories") or [])
+    for cat in analysis.get("drop_categories") or []:
+        if cat not in categories:
+            errors.append(f"analysis.yaml: drop_categories has {cat!r}, which is not "
+                          "in `categories` — it can never match anything")
+
+    tiers = analysis.get("competitors") or {}
+    tiered = set(tiers.get("high_priority") or []) | set(tiers.get("medium_priority") or [])
+    cap = tiers.get("non_priority_max_significance")
+    if cap and cap not in SIGNIFICANCE_LEVELS:
+        errors.append(f"analysis.yaml: non_priority_max_significance {cap!r} must be "
+                      f"one of {', '.join(sorted(SIGNIFICANCE_LEVELS))}")
+    other = tiers.get("other_label", "Industry")
+    for name in sorted(competitors_used - tiered - {other}):
+        warnings.append(f"competitor {name!r} is used in sources.yaml but not listed in "
+                        "analysis.yaml `competitors` — its insights will be untiered")
+
+    max_age = analysis.get("max_age_days")
+    if max_age not in (None, "auto") and not isinstance(max_age, int):
+        errors.append(f"analysis.yaml: max_age_days should be a number or \"auto\", "
+                      f"got {max_age!r}")
+    return errors, warnings

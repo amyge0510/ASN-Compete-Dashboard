@@ -82,6 +82,9 @@ each competitor move targets.
 </td></tr>
 </table>
 
+> **Taking this over?** Read [RUNBOOK.md](RUNBOOK.md) — how to add a source,
+> how to tell when something broke, and what to do about it.
+
 ## Configuring sources (**Non-Technical 💼**)
 
 **`config/sources.yaml` is the only file you should
@@ -112,10 +115,13 @@ hand today.
   and binds visitors, pages authwall automated fetchers, and the official API
   only reads pages you administer.
 
-**Step 3 — Verify before you rely on it.**
+**Step 3 — Verify before you rely on it.** Committing to `config/` triggers
+the `config-check` workflow automatically — check the Actions tab. Or run it
+yourself:
 
 ```bash
-python -m scraper check-sources
+python -m scraper validate        # structure: instant, no network
+python -m scraper check-sources   # reachability: does each source return data?
 ```
 
 Fetches every configured source and reports item/course counts or failures.

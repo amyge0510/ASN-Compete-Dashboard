@@ -86,33 +86,6 @@ sources:
       Academy runs on the Gradual platform; the content sitemap (~220 URLs)
       covers courses, collections, videos, and blogs under /public/.
 
-  # ── NVIDIA DLI ───────────────────────────────────────────────────────
-  - name: nvidia-dli-training
-    type: course_catalog
-    url: https://www.nvidia.com/en-us/training/
-    competitor: NVIDIA Deep Learning Institute
-    notes: >
-      NVIDIA Deep Learning Institute training landing page; lists workshops,
-      instructor-led courses, and self-paced offerings. Monitor for new course
-      launches and training announcements.
-
-  - name: nvidia-dli-certification
-    type: course_catalog
-    url: https://www.nvidia.com/en-us/learn/certification/
-    competitor: NVIDIA Deep Learning Institute
-    notes: >
-      Certification program page — monitors certification offerings, requirements,
-      and updated exam info.
-
-  - name: nvidia-dli-find-training
-    type: course_catalog
-    url: https://www.nvidia.com/en-us/training/find-training/
-    competitor: NVIDIA Deep Learning Institute
-    notes: >
-      Search/find-training portal for partner and public offerings; may be
-      JavaScript-rendered — set `render: true` if catalogs are empty or the
-      scraper cannot discover items.
-
   # ── Salesforce ─────────────────────────────────────────────────────────
   - name: salesforce-blog
     type: rss
