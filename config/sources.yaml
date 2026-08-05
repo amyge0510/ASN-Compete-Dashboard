@@ -113,8 +113,10 @@ sources:
 # the same dedup as everything else.
 discovery:
   enabled: true
-  lookback_days: 14        # discovery keeps re-finding the same stories
-                            # in a wide window; keep this tight
+  # Ceiling, and the fallback for the very first run. Normally the window is
+  # the gap since the previous run, so discovery tracks your actual cadence
+  # instead of re-finding the same stories in a wide fixed window.
+  lookback_days: 14
   results_per_target: 8       # articles surfaced per target per run
   max_searches: 8             # web-search calls the model may spend per target
   # Syndication mirrors — the model is told to find the original article

@@ -32,6 +32,24 @@ def load_config(path: str | Path = SOURCES_PATH) -> dict:
     return load_sources(path)
 
 
+def days_since_last_run(store: Store, floor: int = 1, ceiling: int = 90) -> int | None:
+    """Whole days since the previous run, or None before the first run.
+
+    The lookback window should track how often the pipeline actually runs: a
+    weekly schedule wants 7 days, a run 4 days later wants 4. Clamped so a
+    same-day re-run still asks for a usable window, and so a long outage
+    (expired cache, paused schedule) cannot request a flood.
+    """
+    run = store.latest_run()
+    if not run or not run[0]:
+        return None
+    last = _parse_published(run[0])
+    if last is None:
+        return None
+    gap = (datetime.now(timezone.utc) - last).total_seconds() / 86400
+    return max(floor, min(ceiling, int(gap) or floor))
+
+
 def _publish_site() -> None:
     """Push site/ to the static host if configured; never fails the run."""
     try:
@@ -86,11 +104,17 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False) -> None:
         except Exception as e:
             logger.error("[%s] ingestion failed: %s", source["name"], e)
 
+    # How far back this run should look: the gap since the previous run, so
+    # the window tracks the actual cadence instead of a fixed guess.
+    gap_days = days_since_last_run(store)
+    if gap_days is not None:
+        logger.info("Lookback window: %d day(s) since the previous run", gap_days)
+
     # Layer 1b: search-based discovery — finds updates posted outside the
     # configured feeds. Failures here never block the configured sources.
     if not skip_discovery:
         try:
-            all_items.extend(discover(config))
+            all_items.extend(discover(config, lookback_override=gap_days))
         except Exception as e:
             logger.error("Discovery failed: %s", e)
 
@@ -123,6 +147,15 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False) -> None:
     # Stale items are still marked seen below, so they never come back.
     analysis_config = load_analysis()
     max_age = analysis_config.get("max_age_days")
+    if max_age == "auto":
+        # Track the run cadence, plus a grace buffer: feeds sometimes publish
+        # an item days after its stated date, and a window with no slack
+        # would silently drop those.
+        grace = analysis_config.get("max_age_grace_days", 3)
+        max_age = (gap_days + grace) if gap_days is not None else None
+        if max_age:
+            logger.info("Recency window: %d day(s) (run gap + %d grace)",
+                        max_age, grace)
     items_to_analyze = new_items
     if max_age:
         items_to_analyze = [i for i in new_items if not is_stale(i.published, max_age)]

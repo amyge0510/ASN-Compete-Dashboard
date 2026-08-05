@@ -122,7 +122,8 @@ def _extract(findings: str) -> list[dict]:
     return result["candidates"]
 
 
-def discover(config: dict, analysis: dict | None = None) -> list[FeedItem]:
+def discover(config: dict, analysis: dict | None = None,
+             lookback_override: int | None = None) -> list[FeedItem]:
     """Run discovery for every target in the config's `discovery` section.
 
     `analysis` is the loaded analysis.yaml; it supplies the researcher persona
@@ -136,7 +137,10 @@ def discover(config: dict, analysis: dict | None = None) -> list[FeedItem]:
     persona = analysis["persona"]
     subject = analysis.get("subject", "product")
 
-    lookback = settings.get("lookback_days", 45)
+    # The configured value is the fallback for a first run and the ceiling
+    # for everything else; normally the window is the gap since the last run.
+    configured = settings.get("lookback_days", 45)
+    lookback = min(lookback_override, configured) if lookback_override else configured
     results_per_target = settings.get("results_per_target", RESULTS_PER_TARGET)
     max_searches = settings.get("max_searches", MAX_SEARCHES_PER_TARGET)
     blocked = [d.lower() for d in

@@ -40,7 +40,14 @@ brand: Compete Monitor
 # not analyzed. Undated items are always kept. Remove or set to null to
 # disable. Does NOT apply to `backfill`, whose --days flag sets its own
 # window on purpose.
-max_age_days: 30
+#
+# "auto" tracks how often you actually run: the window becomes the gap since
+# the previous run plus `max_age_grace_days`. Run weekly and it asks for ~7
+# days; run again 4 days later and it asks for ~4. A fixed number still works
+# if you prefer one.
+max_age_days: auto
+max_age_grace_days: 3   # slack for feeds that publish an item days after
+                        # its stated date; without it those are dropped
 
 # ── Insight vocabulary ────────────────────────────────────────────────────
 # The `category` enum the model must choose from. Rename or replace freely —
