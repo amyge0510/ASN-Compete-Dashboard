@@ -112,6 +112,7 @@ def validate(sources_path: str | Path = SOURCES_PATH,
         entries = []
 
     seen_names = set()
+    seen_urls: dict[str, str] = {}
     competitors_used = set()
     for n, src in enumerate(entries, 1):
         if not isinstance(src, dict):
@@ -124,6 +125,14 @@ def validate(sources_path: str | Path = SOURCES_PATH,
         if src.get("name") in seen_names:
             errors.append(f"source {label}: duplicate name")
         seen_names.add(src.get("name"))
+        if src.get("url"):
+            from scraper.store import normalize_url
+            key = normalize_url(src["url"])
+            if key in seen_urls:
+                errors.append(f"source {label}: same URL as {seen_urls[key]!r} "
+                              "— two sources snapshotting one page double-report "
+                              "catalogue changes")
+            seen_urls[key] = src.get("name")
         if src.get("competitor"):
             competitors_used.add(src["competitor"])
         stype = src.get("type")

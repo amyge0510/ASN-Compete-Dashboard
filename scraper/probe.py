@@ -43,9 +43,36 @@ def _declared_feeds(soup: BeautifulSoup, base: str) -> list[str]:
             or "atom" in (link.get("type") or "").lower()]
 
 
+def _already_configured(url: str) -> tuple[str, str] | None:
+    """(name, type) of an existing source with the same URL, if any."""
+    try:
+        from scraper.store import normalize_url
+        from scraper.config import load_sources
+        target = normalize_url(url)
+        for src in load_sources().get("sources") or []:
+            if src.get("url") and normalize_url(src["url"]) == target:
+                return src.get("name", "?"), src.get("type", "?")
+    except Exception:
+        pass  # probing must still work outside a configured checkout
+    return None
+
+
 def probe(url: str) -> tuple[str, list[str]]:
     """Return (verdict, human-readable notes)."""
     notes: list[str] = []
+
+    # Cheapest possible answer: it is already being monitored. Adding it twice
+    # gives two sources snapshotting one page, which double-reports catalogue
+    # changes and is tedious to unpick later.
+    existing = _already_configured(url)
+    if existing:
+        name, stype = existing
+        return "ALREADY CONFIGURED", [
+            f"This URL is already a source: `{name}` (type: {stype}).",
+            "Nothing to do. Check the dashboard's Source health tab to see "
+            "whether it is working.",
+        ]
+
     try:
         body = fetch(url)
     except Exception as e:
@@ -300,6 +327,8 @@ def report(url: str) -> int:
         "CUSTOM": "NEEDS CUSTOM CODE — not usable from config alone",
         "BLOCKED": "BLOCKED — the site refuses automated access",
         "UNREACHABLE": "UNREACHABLE — could not connect (may be your network)",
+        "ALREADY CONFIGURED": "ALREADY CONFIGURED — this URL is already being "
+                              "monitored",
     }[verdict]
     print(f"\n{url}\n{headline}\n")
     for note in notes:
@@ -333,26 +362,17 @@ def report(url: str) -> int:
                    "config change will help. Look for an RSS feed or sitemap "
                    "instead.",
         "UNREACHABLE": "check the URL opens in a browser, then run this again.",
+        "ALREADY CONFIGURED": "nothing to do — this source already exists.",
     }[verdict]
     _step_summary(url, headline, notes, prompt, next_step)
 
+    print(f"\n  NEXT STEP: {next_step}\n")
     if prompt:
-        print("\n" + "=" * 70)
-        print("NEXT STEP — paste everything between the lines into GitHub")
-        print("Copilot Chat, with this repository open. Replace the")
-        print("<REPLACE WITH ...> placeholder first.")
+        print("=" * 70)
+        print("Paste everything between the lines into GitHub Copilot Chat,")
+        print("with this repository open. Replace the <REPLACE WITH ...>")
+        print("placeholder first.")
         print("=" * 70)
         print(prompt)
         print("=" * 70 + "\n")
-    elif verdict == "CUSTOM":
-        print("\n  NEXT STEP: stop here. This page cannot be added from "
-              "config alone —\n  it needs an engineer. Look for an RSS feed "
-              "or sitemap on the same\n  site and probe that instead.\n")
-    elif verdict == "BLOCKED":
-        print("\n  NEXT STEP: stop here. The site refuses automated access "
-              "and no\n  config change will help. Look for an RSS feed or "
-              "sitemap instead.\n")
-    else:
-        print("\n  NEXT STEP: check the URL opens in a browser, then run "
-              "this again.\n")
     return 0 if verdict == "READY" else 1

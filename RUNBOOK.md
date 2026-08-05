@@ -49,6 +49,7 @@ Summary page** — you do not need to open any logs. It looks like this:
 | `NEEDS CUSTOM CODE` | JavaScript-rendered or a landing page. Config cannot fix this; it needs an engineer. |
 | `BLOCKED` | The site refuses automated access. Nothing will fix it — look for a feed instead. |
 | `UNREACHABLE` | Could not connect. Often the network, not the site. Check the URL opens in a browser. |
+| `ALREADY CONFIGURED` | This URL is already a source. Nothing to do — check Source health to see if it is working. |
 
 It also tells you when a page **declares an RSS feed** — always prefer the
 feed over scraping the page.
