@@ -134,6 +134,72 @@ def probe(url: str) -> tuple[str, list[str]]:
     ]
 
 
+def _suggested_name(url: str) -> str:
+    """A plausible source name, e.g. nvidia-training, from the URL."""
+    parts = urlsplit(url)
+    host = (parts.hostname or "source").replace("www.", "").split(".")[0]
+    tail = [p for p in parts.path.strip("/").split("/") if p and "." not in p]
+    slug = f"{host}-{tail[-1]}" if tail else host
+    return re.sub(r"[^a-z0-9-]+", "-", slug.lower()).strip("-")
+
+
+def copilot_prompt(verdict: str, url: str, source_type: str | None = None,
+                   feed_url: str | None = None) -> str | None:
+    """A self-contained prompt to paste into GitHub Copilot Chat.
+
+    The point is that the person adding a source should never have to know
+    the YAML shape, which file the tiers live in, or that scraper/ is
+    off-limits. The prompt carries all of that.
+    """
+    name = _suggested_name(url)
+    target = feed_url or url
+    common = (
+        "Rules:\n"
+        "- Match the formatting, indentation and comment style of the "
+        "existing entries.\n"
+        "- Also add the competitor's name to `medium_priority` under "
+        "`competitors:` in config/analysis.yaml (use `high_priority` only for "
+        "a direct compete target). analysis.yaml is the file the analyst "
+        "prompt actually reads.\n"
+        "- Do NOT modify anything under scraper/.\n"
+        "- Show me the diff before applying it."
+    )
+
+    if verdict == "READY":
+        stype = source_type or "rss"
+        return (
+            f"Add a new source to config/sources.yaml in this repo.\n\n"
+            f"  name: {name}\n"
+            f"  type: {stype}\n"
+            f"  url: {target}\n"
+            f"  competitor: <REPLACE WITH THE COMPETITOR'S NAME>\n\n"
+            f"Add a short `notes:` line saying what this source covers.\n\n"
+            f"{common}"
+        )
+
+    if verdict == "SELECTOR":
+        return (
+            f"Add a new course-catalog source to config/sources.yaml in this "
+            f"repo, for this page:\n\n  {url}\n\n"
+            f"First work out the CSS selector. Fetch the page and find the "
+            f"selector that matches ONLY links to individual courses — not "
+            f"navigation, footer, breadcrumb, or call-to-action links. Prefer "
+            f"a URL-pattern selector such as a[href*='/courses/'] over class "
+            f"names, because class names change when sites are redesigned. "
+            f"Tell me which selector you chose, roughly how many links it "
+            f"matches, and show me three example link texts so I can confirm "
+            f"they are courses and not menu items.\n\n"
+            f"Then add the entry:\n\n"
+            f"  name: {name}\n"
+            f"  type: course_catalog\n"
+            f"  url: {url}\n"
+            f"  competitor: <REPLACE WITH THE COMPETITOR'S NAME>\n"
+            f"  item_selector: <the selector you chose>\n\n"
+            f"{common}"
+        )
+    return None
+
+
 def report(url: str) -> int:
     """Print a plain-English verdict. Returns 0 if usable as-is."""
     verdict, notes = probe(url)
@@ -147,5 +213,37 @@ def report(url: str) -> int:
     print(f"\n{url}\n{headline}\n")
     for note in notes:
         print(f"  {note}")
-    print()
+
+    # Next step, spelled out. For the two workable verdicts that is a
+    # ready-to-paste Copilot prompt; for the rest it is "stop here".
+    stype = None
+    feed = None
+    for note in notes:
+        if "RSS/Atom feed" in note:
+            stype = "rss"
+        elif "XML sitemap" in note:
+            stype = "sitemap"
+        elif note.strip().endswith("(add with `type: rss`)"):
+            stype, feed = "rss", note.strip().split()[0]
+
+    prompt = copilot_prompt(verdict, url, stype, feed)
+    if prompt:
+        print("\n" + "=" * 70)
+        print("NEXT STEP — paste everything between the lines into GitHub")
+        print("Copilot Chat, with this repository open. Replace the")
+        print("<REPLACE WITH ...> placeholder first.")
+        print("=" * 70)
+        print(prompt)
+        print("=" * 70 + "\n")
+    elif verdict == "CUSTOM":
+        print("\n  NEXT STEP: stop here. This page cannot be added from "
+              "config alone —\n  it needs an engineer. Look for an RSS feed "
+              "or sitemap on the same\n  site and probe that instead.\n")
+    elif verdict == "BLOCKED":
+        print("\n  NEXT STEP: stop here. The site refuses automated access "
+              "and no\n  config change will help. Look for an RSS feed or "
+              "sitemap instead.\n")
+    else:
+        print("\n  NEXT STEP: check the URL opens in a browser, then run "
+              "this again.\n")
     return 0 if verdict == "READY" else 1

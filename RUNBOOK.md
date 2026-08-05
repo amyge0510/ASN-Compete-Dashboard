@@ -53,6 +53,18 @@ URL?"*, and read the verdict:
 It also tells you when a page **declares an RSS feed** — always prefer the
 feed over scraping the page.
 
+**For `READY` and `NEEDS A SELECTOR`, the output ends with a ready-made prompt.**
+Copy everything between the `====` lines, replace the
+`<REPLACE WITH THE COMPETITOR'S NAME>` placeholder, and paste it into GitHub
+Copilot Chat with this repository open. The prompt already tells Copilot which
+files to edit, to add the competitor to the tier list in `analysis.yaml`, not
+to touch `scraper/`, and to show you the diff first. Steps 1–3 below are then
+done for you — skip to Step 4.
+
+For `NEEDS CUSTOM CODE`, `BLOCKED` and `UNREACHABLE` there is no prompt,
+because no config change can make those work. Stop and look for a feed or
+sitemap on the same site instead.
+
 Locally the same check is `python -m scraper probe --url <URL>`.
 
 **Step 1 — find the right URL.** In order of preference:
