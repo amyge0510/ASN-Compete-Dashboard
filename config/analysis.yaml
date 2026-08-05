@@ -1,0 +1,139 @@
+# HOW the pipeline judges what it finds.
+#
+# config/sources.yaml decides WHERE to look. This file decides what matters
+# once something is found: who the analyst is, what vocabulary insights use,
+# what counts as significant, and what to ignore outright.
+#
+# Adapting this pipeline to a different beat is mostly editing this file.
+# Nothing here is referenced by the Python except by name — analyze.py and
+# discovery.py compose their prompts from these values.
+#
+# Careful: mistakes here fail SILENTLY. A bad source URL is reported by
+# `python -m scraper check-sources`; a bad significance rule just produces
+# plausible-looking wrong insights. Change it deliberately.
+
+# ── Who the analyst is ────────────────────────────────────────────────────
+# Opens every analysis prompt. State the team, what it owns, and what it
+# monitors. This single block does more to shape output quality than
+# anything else in the file.
+persona: >
+  You are a competitive-intelligence analyst on the Microsoft AI Skills
+  Navigator Compete team. AI Skills Navigator is Microsoft's AI-powered
+  skilling platform for developers and business users. You monitor competing
+  learning platforms — AWS Skill Builder, Google Cloud Skills Boost,
+  Salesforce Trailhead, and similar — for product updates, new
+  certifications, new courses, pricing changes, and strategy shifts.
+
+# The noun for the thing being tracked. Used in the discovery layer's search
+# prompt ("updates about the {competitor} {subject}").
+subject: learning platform
+
+# Site header / page titles.
+brand: Compete Monitor
+
+# ── Insight vocabulary ────────────────────────────────────────────────────
+# The `category` enum the model must choose from. Rename or replace freely —
+# these are the buckets your dashboard filters by.
+categories:
+  - new_course
+  - removed_course
+  - certification
+  - product_update
+  - pricing
+  - partnership
+  - strategy
+  - other
+
+# Categories deleted after analysis, no matter what the model returns. This
+# is a hard guarantee, not a nudge — the prompt discourages them and this
+# drops any that slip through.
+#
+# For this team, company-level business news is noise: Compete tracks
+# skilling PRODUCTS. Other beats often want the opposite — for someone
+# tracking industry adoption, partnerships and pricing are the whole story.
+# Set this to [] to keep everything.
+drop_categories:
+  - partnership
+  - pricing
+
+# Who a competitor move targets. Set to [unknown] if the distinction does
+# not apply to your beat.
+audiences:
+  - developers
+  - business_users
+  - both
+  - unknown
+
+# Extra boolean flags on every insight: name -> description shown to the
+# model. Keep the list short; each one is a judgement call the model must
+# make on every item.
+flags:
+  ai_related: >
+    True if this is an AI-skilling move (AI courses, AI certs, AI features).
+
+# ── Calibration ───────────────────────────────────────────────────────────
+# What high / medium / low mean. Be concrete and give examples — this is the
+# rubric the model actually follows, and vague rules produce inflated
+# significance across the board.
+significance_rules: >
+  Significance ranks PRODUCT SIGNAL about the competitor's skilling platform,
+  never business magnitude:
+
+  - "high": any product- or feature-level update to the skilling platform
+    itself — new platform capabilities or modes, new certification/badging
+    programs, new learning modalities or paths, a catalog pivot. Every
+    platform feature a competitor ships reveals where their product is
+    heading, so feature announcements are high even when the feature itself
+    looks small. Examples: "AWS introduces SimuLearn learning plan badges as
+    verifiable proof of hands-on skills" and "Skill Builder adds Self-Paced
+    Trivia and Polls" are BOTH high. Official platform announcements from
+    high-priority competitors default to high — just confirm the item
+    genuinely is a product/feature-level update.
+  - "medium": individual course or content additions worth noting,
+    incremental content refreshes, and notable community signal.
+  - "low": routine course churn and minor content updates.
+
+# Anything else the analyst should know. Appended to the prompt verbatim.
+# Use it for beat-specific rules that do not fit the fields above.
+extra_guidance: >
+  Theme detection on catalog changes: when the newly-appearing-courses list
+  contains several courses that cluster around a shared topic, ALSO produce
+  one "strategy" insight naming the theme — e.g. headline "AWS is building
+  out an agentic-AI track (6 of 11 new courses)", with the so_what saying
+  what focus area this suggests the competitor is investing in. One theme
+  insight per clear cluster (don't force one if the additions are
+  scattered); significance "high" if the cluster suggests a new strategic
+  focus area, otherwise "medium". Routine one-off course adds still get
+  their normal individual treatment.
+
+  DO NOT EMIT INSIGHTS for company-level business news at all: partnerships,
+  customer/training deals ("X to train 20,000 engineers on Y"), company
+  pricing or free-access grants, funding, executive changes, model/API
+  releases, hardware — anything where no learning-platform feature or
+  program changed. This team tracks skilling PRODUCTS; company news is noise
+  here, so skip those items entirely rather than rating them low. The one
+  exception: if a deal directly changes the skilling platform itself (e.g. a
+  partnership that adds a certification track), treat it as the platform
+  change it is, categorized by what changed.
+
+# ── Competitor tiers ──────────────────────────────────────────────────────
+# Drives significance calibration and the canonical names every insight must
+# use. `name_mappings` collapses variants onto the canonical name.
+competitors:
+  high_priority:        # direct compete targets: bar for "high" is lower
+    - Salesforce Trailhead
+    - AWS
+    - Google
+  medium_priority:      # watch closely, but reserve "high" for major moves
+    - Anthropic
+    - OpenAI
+    - Coursera
+    - Udemy
+    - LinkedIn Learning
+    - ServiceNow University
+  name_mappings:
+    - "'OpenAI Academy' -> OpenAI"
+    - "'Google Cloud Skills Boost' / 'Google Skills' -> Google"
+    - "'Trailhead' -> Salesforce Trailhead"
+  # Catch-all bucket for market-wide moves by anyone not listed above.
+  other_label: Industry

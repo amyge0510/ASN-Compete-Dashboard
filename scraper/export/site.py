@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
 
+from scraper.config import load_analysis
 from scraper.store import Store
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,11 @@ _REFRESH_SCRIPT = """
 """
 
 
+def _brand() -> str:
+    """Site name, from config/analysis.yaml."""
+    return load_analysis().get("brand", "Change Monitor")
+
+
 def _nav(competitors: list[str], active: str) -> str:
     links = [("Overview", "index.html")]
     links += [(c, f"competitor-{slugify(c)}.html") for c in competitors]
@@ -190,7 +196,7 @@ def _nav(competitors: list[str], active: str) -> str:
                    'target="_blank" rel="noopener" title="Runs a fresh check '
                    '(takes ~15 minutes); refresh this page afterwards">'
                    "&#8635; Refresh data</a>")
-    return (f'<nav><a class="brand" href="index.html">Compete Monitor</a>'
+    return (f'<nav><a class="brand" href="index.html">{_brand()}</a>'
             f"{items}{refresh}</nav>")
 
 
@@ -199,7 +205,7 @@ def _page(title: str, nav: str, body: str) -> str:
     return (
         '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        f"<title>{escape(title)} — Compete Monitor</title>\n"
+        f"<title>{escape(title)} — {escape(_brand())}</title>\n"
         f"<style>{_CSS}</style>\n</head>\n<body>\n"
         f'<div class="wrap">{nav}\n{body}\n'
         f"<footer>Generated {generated} by the compete-monitor pipeline. "

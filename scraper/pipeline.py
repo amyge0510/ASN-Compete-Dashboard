@@ -4,9 +4,8 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-import yaml
-
 from scraper.analyze import analyze
+from scraper.config import SOURCES_PATH, load_analysis, load_sources
 from scraper.export import deploy, site
 from scraper.sources.article import enrich_items
 from scraper.sources.course_catalog import ingest_catalog
@@ -19,8 +18,6 @@ from scraper.store import Store, now_iso
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = "config/sources.yaml"
-
 # Catalog-style sources: snapshot a list of courses/pages, diff run-over-run.
 _CATALOG_INGESTERS = {
     "course_catalog": ingest_catalog,          # CSS-selector scraping (+ optional render)
@@ -30,9 +27,9 @@ _CATALOG_INGESTERS = {
 }
 
 
-def load_config(path: str | Path = CONFIG_PATH) -> dict:
-    with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def load_config(path: str | Path = SOURCES_PATH) -> dict:
+    """Back-compat alias — sources config. See scraper/config.py."""
+    return load_sources(path)
 
 
 def _publish_site() -> None:
@@ -124,8 +121,7 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False) -> None:
     enrich_items(new_items)
 
     # Layer 2: LLM interpretation of net-new changes only.
-    result = analyze(new_items, added_courses, removed_titles,
-                     config.get("competitors"))
+    result = analyze(new_items, added_courses, removed_titles, load_analysis())
     insights = result["insights"]
 
     # Analysis succeeded — only now persist this run's state, insights first:
@@ -222,7 +218,7 @@ def backfill(days: int = 45) -> None:
     logger.info("Backfill: analyzing %d items from the last %d days",
                 len(items), days)
     enrich_items(items)
-    result = analyze(items, [], {}, config.get("competitors"))
+    result = analyze(items, [], {}, load_analysis())
     insights = result["insights"]
     run_at = store.record_insights(insights)
     store.mark_items_seen(items)

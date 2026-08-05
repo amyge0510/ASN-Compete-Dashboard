@@ -1,20 +1,24 @@
 """Search-based source discovery.
 
-Competitors post learning-platform updates in inconsistent places (aws/
-certifications, aws/skills, blog subcategories, ...). This layer runs a web
-search per competitor via Claude's server-side web_search tool, surfaces the
-top relevant results with generated summaries, and returns them as candidate
-items. Candidates flow through the same knowledge-base dedup as feed items,
-so re-discovered pages are never re-reported.
+Tracked organizations post updates in inconsistent places (subdomains, blog
+subcategories, newsrooms, ...). This layer runs a web search per target,
+surfaces the top relevant results with generated summaries, and returns them
+as candidate items. Candidates flow through the same knowledge-base dedup as
+feed items, so re-discovered pages are never re-reported.
 
-Two API calls per competitor:
-  1. web-search call — Claude searches and writes up its findings (structured
-     output can't be combined with search citations, so this call is prose)
+The researcher persona and the noun for what is being tracked come from
+config/analysis.yaml; the queries come from the `discovery` block of
+config/sources.yaml.
+
+Two API calls per target:
+  1. web-search call — the model searches and writes up its findings
+     (structured output can't be combined with search citations, so prose)
   2. extraction call — structured output turns the findings into clean JSON
 """
 import logging
 
 from scraper import llm
+from scraper.config import load_analysis
 from scraper.sources.rss import FeedItem
 
 logger = logging.getLogger(__name__)
@@ -78,14 +82,19 @@ def _domain_blocked(url: str, blocked: list[str]) -> bool:
 
 
 def _search(competitor: str, query: str, lookback_days: int,
-            results_per_target: int, max_searches: int) -> str:
-    """Build the research prompt and run one web-search-backed call."""
+            results_per_target: int, max_searches: int,
+            persona: str, subject: str) -> str:
+    """Build the research prompt and run one web-search-backed call.
+
+    `persona` and `subject` come from config/analysis.yaml — this module
+    carries no assumptions about what is being researched.
+    """
     prompt = (
-            f"You are researching for the Microsoft AI Skills Navigator Compete "
-            f"team. Search for updates about the {competitor} learning platform "
+            f"{persona.strip()}\n\n"
+            f"Search for updates about the {competitor} {subject} "
             f"from roughly the last {lookback_days} days: {query}\n\n"
             f"Surface up to {results_per_target} relevant results — product "
-            "updates, new certifications/courses, pricing changes, strategy "
+            "updates, launches, pricing changes, strategy "
             "shifts. For each, give the exact URL, title, publication date if "
             "visible, the publisher's name, and a 2-3 sentence summary of what "
             "it announces.\n\n"
@@ -113,11 +122,19 @@ def _extract(findings: str) -> list[dict]:
     return result["candidates"]
 
 
-def discover(config: dict) -> list[FeedItem]:
-    """Run discovery for every target in the config's `discovery` section."""
+def discover(config: dict, analysis: dict | None = None) -> list[FeedItem]:
+    """Run discovery for every target in the config's `discovery` section.
+
+    `analysis` is the loaded analysis.yaml; it supplies the researcher persona
+    and the noun for what is being tracked.
+    """
     settings = config.get("discovery") or {}
     if not settings.get("enabled"):
         return []
+
+    analysis = analysis or load_analysis()
+    persona = analysis["persona"]
+    subject = analysis.get("subject", "product")
 
     lookback = settings.get("lookback_days", 45)
     results_per_target = settings.get("results_per_target", RESULTS_PER_TARGET)
@@ -130,7 +147,8 @@ def discover(config: dict) -> list[FeedItem]:
         competitor = target["competitor"]
         try:
             findings = _search(competitor, target["query"], lookback,
-                               results_per_target, max_searches)
+                               results_per_target, max_searches,
+                               persona, subject)
             if not findings:
                 continue
             for c in _extract(findings):
