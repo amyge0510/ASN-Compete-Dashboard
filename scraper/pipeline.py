@@ -117,11 +117,26 @@ def run(skip_analysis: bool = False, skip_discovery: bool = False) -> None:
                 len(new_items), [], "Analysis skipped (--no-analyze).")
         return
 
+    # Recency guard: dedup answers "have I seen this?", not "is this still
+    # news?". A feed that back-fills old posts, or a discovery result from
+    # last year, is net-new to the knowledge base but stale to a reader.
+    # Stale items are still marked seen below, so they never come back.
+    analysis_config = load_analysis()
+    max_age = analysis_config.get("max_age_days")
+    items_to_analyze = new_items
+    if max_age:
+        items_to_analyze = [i for i in new_items if not is_stale(i.published, max_age)]
+        skipped = len(new_items) - len(items_to_analyze)
+        if skipped:
+            logger.info("Recency filter: %d of %d net-new items are older than "
+                        "%d days — recorded but not analyzed",
+                        skipped, len(new_items), max_age)
+
     # Fetch full article bodies for better analysis (best-effort).
-    enrich_items(new_items)
+    enrich_items(items_to_analyze)
 
     # Layer 2: LLM interpretation of net-new changes only.
-    result = analyze(new_items, added_courses, removed_titles, load_analysis())
+    result = analyze(items_to_analyze, added_courses, removed_titles, analysis_config)
     insights = result["insights"]
 
     # Analysis succeeded — only now persist this run's state, insights first:
@@ -170,6 +185,33 @@ def check_sources() -> int:
         print(f"  {source['name']:<32} {status}")
     print(f"\n{len(config['sources']) - failures}/{len(config['sources'])} sources healthy")
     return failures
+
+
+def _parse_published(published: str):
+    """Best-effort feed-date parse (RFC 2822 or ISO); None if unparseable."""
+    if not published:
+        return None
+    try:
+        parsed = parsedate_to_datetime(published)
+    except (TypeError, ValueError):
+        try:
+            parsed = datetime.fromisoformat(published.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def is_stale(published: str, days: int) -> bool:
+    """True only when the date parses AND is older than `days`.
+
+    Deliberately lenient: undated items are kept, because we cannot prove
+    they are old and dropping them would silently lose discovery results,
+    which frequently carry no publication date.
+    """
+    parsed = _parse_published(published)
+    return parsed is not None and parsed < datetime.now(timezone.utc) - timedelta(days=days)
 
 
 def published_within(published: str, days: int) -> bool:

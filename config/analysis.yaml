@@ -33,6 +33,15 @@ subject: learning platform
 # Site header / page titles.
 brand: Compete Monitor
 
+# Recency guard for normal runs. Dedup answers "have I seen this?", not "is
+# this still news?" — a feed that back-fills old posts, or a discovery result
+# from last year, is net-new to the knowledge base but stale to a reader.
+# Items provably older than this are recorded (so they never resurface) but
+# not analyzed. Undated items are always kept. Remove or set to null to
+# disable. Does NOT apply to `backfill`, whose --days flag sets its own
+# window on purpose.
+max_age_days: 30
+
 # ── Insight vocabulary ────────────────────────────────────────────────────
 # The `category` enum the model must choose from. Rename or replace freely —
 # these are the buckets your dashboard filters by.
@@ -143,3 +152,8 @@ competitors:
     - "'Trailhead' -> Salesforce Trailhead"
   # Catch-all bucket for market-wide moves by anyone not listed above.
   other_label: Industry
+  # Hard ceiling on significance for anyone NOT in high_priority. The prompt
+  # asks the model to reserve "high" for the priority tier; models inflate,
+  # so this makes it a guarantee — ServiceNow University can never outrank
+  # AWS on the dashboard. Remove to let the model decide freely.
+  non_priority_max_significance: medium

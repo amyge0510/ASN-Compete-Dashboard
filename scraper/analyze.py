@@ -126,6 +126,31 @@ def _apply_drop_categories(insights: list[dict], drop: set[str]) -> list[dict]:
     return kept
 
 
+_SIGNIFICANCE_ORDER = {"low": 0, "medium": 1, "high": 2}
+
+
+def _apply_significance_cap(insights: list[dict], tiers: dict | None) -> list[dict]:
+    """Deterministic ceiling for anyone outside `high_priority`.
+
+    The prompt asks the model to reserve 'high' for the priority tier, but
+    models inflate. `non_priority_max_significance` in analysis.yaml makes it
+    a guarantee: an org not named in high_priority can never outrank one that
+    is, no matter what the model returns."""
+    cap = (tiers or {}).get("non_priority_max_significance")
+    if not cap:
+        return insights
+    ceiling = _SIGNIFICANCE_ORDER.get(cap, 2)
+    priority = set((tiers or {}).get("high_priority") or [])
+    for i in insights:
+        current = _SIGNIFICANCE_ORDER.get(i.get("significance"), 0)
+        if i.get("competitor") not in priority and current > ceiling:
+            logger.info("Capping %s significance %s -> %s: %s",
+                        i.get("competitor"), i.get("significance"), cap,
+                        i.get("headline", ""))
+            i["significance"] = cap
+    return insights
+
+
 def _catalog_sections(added_courses: list, removed_titles: dict) -> list[str]:
     sections = []
     if added_courses:
@@ -215,6 +240,7 @@ def analyze(new_items: list, added_courses: list, removed_titles: dict,
         insights.extend(result["insights"])
 
     insights = _apply_drop_categories(insights, drop)
+    insights = _apply_significance_cap(insights, config.get("competitors"))
     if not insights:
         return {"insights": [], "weekly_summary": "No relevant changes this run."}
 
