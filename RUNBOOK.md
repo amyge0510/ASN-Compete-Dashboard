@@ -46,8 +46,8 @@ Summary page** — you do not need to open any logs. It looks like this:
 |---|---|
 | `READY` | Paste it into `sources.yaml` with the type it names. Done. |
 | `NEEDS A SELECTOR` | Server-rendered list — usable, but someone must pick a CSS `item_selector`. |
-| `NEEDS CUSTOM CODE` | JavaScript-rendered or a landing page. Config cannot fix this; it needs an engineer. |
-| `BLOCKED` | The site refuses automated access. Nothing will fix it — look for a feed instead. |
+| `NEEDS CUSTOM CODE` | JavaScript-rendered or a landing page. Cannot be scraped — use the discovery prompt instead. |
+| `BLOCKED` | The site refuses automated access. Cannot be scraped — use the discovery prompt instead. |
 | `UNREACHABLE` | Could not connect. Often the network, not the site. Check the URL opens in a browser. |
 | `ALREADY CONFIGURED` | This URL is already a source. Nothing to do — check Source health to see if it is working. |
 
@@ -78,9 +78,19 @@ files to edit, to add the competitor to the tier list in `analysis.yaml`, not
 to touch `scraper/`, and to show you the diff first. Steps 1–3 below are then
 done for you — skip to Step 4.
 
-For `NEEDS CUSTOM CODE`, `BLOCKED` and `UNREACHABLE` there is no prompt,
-because no config change can make those work. Stop and look for a feed or
-sitemap on the same site instead.
+For `NEEDS CUSTOM CODE` and `BLOCKED` the page cannot be scraped — but the
+competitor is not lost. The summary gives you a **different prompt**: one that
+adds them to the **discovery layer** instead. Discovery web-searches a query
+you define on every run and feeds whatever it finds through the same pipeline,
+so a competitor whose pages cannot be parsed is still covered. It needs no
+selector and no code.
+
+Coverage is looser than a feed — you get what a search engine surfaces rather
+than everything they publish — but it is real coverage, and it is the right
+answer for most sites that resist scraping.
+
+`UNREACHABLE` gets no prompt: nothing was learned about the page, so try
+again before deciding anything.
 
 Locally the same check is `python -m scraper probe --url <URL>`.
 

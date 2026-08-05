@@ -320,6 +320,26 @@ def copilot_prompt(verdict: str, url: str, source_type: str | None = None,
             f"{common}"
         )
 
+    if verdict in ("CUSTOM", "BLOCKED"):
+        # Not scrapable, but not a dead end: the discovery layer web-searches
+        # each target every run, so a competitor whose pages cannot be parsed
+        # is still covered. This is config-only and needs no selector.
+        host = (urlsplit(url).hostname or "").removeprefix("www.")
+        return (
+            f"This page cannot be scraped, so add the competitor to the "
+            f"search-based discovery layer instead of `sources:`.\n\n"
+            f"In config/sources.yaml, add a new entry under "
+            f"`discovery:` -> `targets:`:\n\n"
+            f"  - competitor: <REPLACE WITH THE COMPETITOR'S NAME>\n"
+            f"    query: <search terms that would find their training and "
+            f"certification news — e.g. \"{host} new courses certifications "
+            f"training platform updates\">\n\n"
+            f"Every run will web-search that query and feed the results "
+            f"through the same pipeline, so the competitor is covered even "
+            f"though the page itself cannot be read.\n\n"
+            f"{common}"
+        )
+
     if verdict == "SELECTOR":
         selector = selector or "<CHOOSE A SELECTOR — see the suggestions above>"
         return (
@@ -396,12 +416,13 @@ def report(url: str) -> int:
     next_step = {
         "READY": "paste the prompt below into GitHub Copilot Chat.",
         "SELECTOR": "paste the prompt below into GitHub Copilot Chat.",
-        "CUSTOM": "stop here — this page cannot be added from config alone. "
-                  "Look for an RSS feed or sitemap on the same site and test "
-                  "that instead.",
-        "BLOCKED": "stop here — the site refuses automated access and no "
-                   "config change will help. Look for an RSS feed or sitemap "
-                   "instead.",
+        "CUSTOM": "this page cannot be scraped. Either find an RSS feed or "
+                  "sitemap on the same site and test that, or cover the "
+                  "competitor with a discovery search query — the prompt "
+                  "below does that.",
+        "BLOCKED": "the site refuses automated access, so scraping is out. "
+                   "Cover the competitor with a discovery search query "
+                   "instead — the prompt below does that.",
         "UNREACHABLE": "check the URL opens in a browser, then run this again.",
         "ALREADY CONFIGURED": "nothing to do — this source already exists.",
     }[verdict]
