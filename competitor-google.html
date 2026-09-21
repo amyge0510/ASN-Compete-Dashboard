@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Google — Compete Monitor</title>
+<style>
+  :root { color-scheme: light;
+          --bg: #faf7ef; --band: #f2ecdb; --card: #ffffff;
+          --line: #e7e1d2; --ink: #17181a; --muted: #6f6f6f;
+          --teal: #6c5898; --teal-deep: #54447a; --teal-fill: #efecf6;
+          --red: #b3402e; --amber: #a8722a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", -apple-system, system-ui, sans-serif;
+         background: var(--bg); color: var(--ink); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 64px; }
+  nav { background: var(--band); border-bottom: 1px solid var(--line);
+        margin: 0 -24px 28px; padding: 14px 24px;
+        display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
+  nav .brand { color: var(--ink); font-weight: 700; font-size: 15px;
+               letter-spacing: .02em; margin-right: 8px; text-decoration: none; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; }
+  nav a:hover { color: var(--teal-deep); }
+  nav a.active { color: var(--teal-deep); border-bottom: 2px solid var(--teal);
+                 padding-bottom: 2px; font-weight: 600; }
+  nav .refresh { margin-left: auto; background: var(--teal-deep); color: #fff;
+                 border: none; border-radius: 8px; padding: 6px 14px;
+                 font-size: 12px; font-weight: 600; cursor: pointer;
+                 text-decoration: none; }
+  nav .refresh:hover { background: var(--teal); color: #fff; }
+  nav button.refresh { font-family: inherit; }
+  nav .refresh[disabled] { opacity: .75; cursor: default; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .summary { background: var(--card); border: 1px solid var(--line);
+             border-left: 4px solid var(--teal); border-radius: 12px;
+             padding: 14px 18px; font-size: 15px; line-height: 1.5; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+          gap: 12px; margin: 20px 0 8px; }
+  .kpi { background: var(--card); border: 1.5px solid var(--teal);
+         border-radius: 12px; padding: 12px 16px; }
+  .kpi .n { font-size: 24px; font-weight: 700; color: var(--teal);
+            font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 11px; color: var(--muted); text-transform: uppercase;
+            letter-spacing: .06em; }
+  h2 { font-size: 15px; margin: 32px 0 12px; text-transform: uppercase;
+       letter-spacing: .05em; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+           gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line);
+          border-radius: 12px; padding: 14px 16px; }
+  .card .meta { font-size: 12px; margin-bottom: 6px; }
+  .badge { display: inline-block; border-radius: 10px; padding: 1px 9px;
+           font-size: 11px; font-weight: 600; color: #fff; }
+  .chip { display: inline-block; background: var(--teal-fill); border-radius: 10px;
+          padding: 1px 9px; font-size: 11px; color: var(--teal-deep);
+          margin-left: 6px; }
+  .chip.new { background: #e4efe2; color: #3c6b35; font-weight: 700; }
+  .card h3 { font-size: 15px; margin: 0 0 6px; }
+  .card h3 a, td a, .comp-block a { color: var(--teal-deep); text-decoration: none; }
+  .card p { font-size: 13px; color: #444; margin: 0; line-height: 1.45; }
+  .card p + p { margin-top: 6px; }
+  .card p strong { color: var(--ink); }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+             margin: 0 0 10px; font-size: 13px; }
+  .filters select, .filters input { font: inherit; font-size: 13px;
+             padding: 4px 8px; border: 1px solid var(--line);
+             border-radius: 8px; background: var(--card); color: var(--ink); }
+  .filters label { color: var(--muted); display: flex; gap: 6px;
+                   align-items: center; }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+          font-size: 13px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #efeadd;
+           vertical-align: top; }
+  th { background: #fbf9f3; font-size: 11px; color: var(--muted);
+       text-transform: uppercase; letter-spacing: .06em; }
+  tr:last-child td { border-bottom: none; }
+  .comp-block { background: var(--card); border: 1px solid var(--line);
+                border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .comp-block h3 { margin: 0 0 8px; font-size: 15px; }
+  .comp-block ul { margin: 6px 0; padding-left: 20px; font-size: 13px;
+                   line-height: 1.6; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .removed { color: var(--red); }
+  .chart { background: var(--card); border: 1px solid var(--line);
+           border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .legend { font-size: 12px; margin-top: 6px; }
+  .legend span { margin-right: 14px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 5px;
+         margin-right: 4px; }
+  footer { margin-top: 40px; color: #a39d8d; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap"><nav><a class="brand" href="index.html">Compete Monitor</a><a href="index.html">Overview</a><a href="competitor-aws.html">AWS</a><a href="competitor-anthropic.html">Anthropic</a><a href="competitor-coursera.html">Coursera</a><a href="competitor-google.html" class="active">Google</a><a href="competitor-industry.html">Industry</a><a href="competitor-linkedin-learning.html">LinkedIn Learning</a><a href="competitor-openai.html">OpenAI</a><a href="competitor-salesforce-trailhead.html">Salesforce Trailhead</a><a href="competitor-servicenow-university.html">ServiceNow University</a><a href="sources.html">Source health</a><a class="refresh" href="https://github.com/amyge0510/ASN-Compete-Dashboard/actions/workflows/monitor.yml" target="_blank" rel="noopener" title="Runs a fresh check (takes ~15 minutes); refresh this page afterwards">&#8635; Refresh data</a></nav>
+<h1>Google</h1><div class="sub">Insight history for all runs; catalog changes shown for the last 30 days.</div><h2>Insight history</h2><table><tr><th>Date</th><th></th><th>Category</th><th>Headline</th></tr><tr data-competitor="Google" data-category="new_course" data-sig="medium" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://www.skills.google/course_templates/1895">New module: Security Best Practices in Google Cloud — Models</a></td></tr><tr data-competitor="Google" data-category="new_course" data-sig="medium" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://www.skills.google/focuses/124952">New lab: Supervised Fine-tuning with Gemini for image captioning</a></td></tr><tr data-competitor="Google" data-category="new_course" data-sig="medium" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://www.skills.google/focuses/104686">New lab: Supervised Fine Tuning with Gemini for article summarization</a></td></tr><tr data-competitor="Google" data-category="new_course" data-sig="medium" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://www.skills.google/focuses/143118">New lab: Streamline data science workflows with the Colab Enterprise Agent</a></td></tr><tr data-competitor="Google" data-category="new_course" data-sig="medium" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://www.skills.google/focuses/165079">New exercise: Design industry-specific structured prompts in Google AI Studio</a></td></tr><tr data-competitor="Google" data-category="strategy" data-sig="high" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>strategy</td><td><a href="https://www.skills.google/">Google retires Agent Platform/ADK multi-agent labs en masse</a></td></tr><tr data-competitor="Google" data-category="strategy" data-sig="high" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>strategy</td><td><a href="https://www.skills.google/course_templates/1895">Google expands cloud security skilling with an AI model security module and SCC/Cloud Armor labs</a></td></tr><tr data-competitor="Google" data-category="certification" data-sig="high" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>certification</td><td><a href="https://blog.google/products-and-platforms/products/education/college-credit-ai-educator-series/">Google adds accredited college and CEU credit to its AI Educator Series</a></td></tr><tr data-competitor="Google" data-category="product_update" data-sig="medium" data-date="2026-09-21"><td>2026-09-21<span class="chip new">NEW</span></td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://blog.google/innovation-and-ai/products/gemini-notebook/new-study-tools-september-2026/">Gemini Notebook adds conversational study, lecture capture, and auto‑generated quizzes</a></td></tr><tr data-competitor="Google" data-category="strategy" data-sig="high" data-date="2026-09-14"><td>2026-09-14</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>strategy</td><td><a href="https://www.skills.google/course_templates/1887">Google is building an enterprise agent security and performance track (6+ new items)</a></td></tr><tr data-competitor="Google" data-category="new_course" data-sig="medium" data-date="2026-09-14"><td>2026-09-14</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://www.skills.google/focuses/164944">Explore Data with Gemini in BigQuery lab added</a></td></tr><tr data-competitor="Google" data-category="new_course" data-sig="medium" data-date="2026-09-14"><td>2026-09-14</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>new_course</td><td><a href="https://www.skills.google/course_templates/1884">Build and Secure MCP services on Cloud Run</a></td></tr><tr data-competitor="Google" data-category="strategy" data-sig="medium" data-date="2026-09-07"><td>2026-09-07</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>strategy</td><td><a href="https://www.skills.google/focuses/164937">Google expands enterprise AI content into agent building and model security</a></td></tr><tr data-competitor="Google" data-category="product_update" data-sig="medium" data-date="2026-09-07"><td>2026-09-07</td><td><span class="badge" style="background:#a8722a">MEDIUM</span></td><td>product_update</td><td><a href="https://blog.google/products-and-platforms/products/education/new-ai-educator-trainings-september-2026/">Google AI Educator Series adds Guided Learning and AI Quests with badged, monthly modules</a></td></tr><tr data-competitor="Google" data-category="certification" data-sig="high" data-date="2026-08-31"><td>2026-08-31</td><td><span class="badge" style="background:#b3402e">HIGH</span></td><td>certification</td><td><a href="https://partner.skills.google/paths/4177">Google adds activity-based renewal for Associate Cloud Engineer (with limited-time reactivation)</a></td></tr></table><h2>Catalog changes (30d)</h2><div class="comp-block"><h3>Added (55)</h3><ul><li><a href="https://www.skills.google/focuses/164906">Secure Virtual Machine Workloads on Google Cloud</a></li><li><a href="https://www.skills.google/focuses/110513">Artifact Registry: Qwik Start</a></li><li><a href="https://www.skills.google/focuses/62708">Knowledge Catalog: Qwik Start - Command Line</a></li><li><a href="https://www.skills.google/focuses/47353">Finding Data in Google Sheets</a></li><li><a href="https://www.skills.google/focuses/155314">Troubleshoot Silent Drops using VPC Flow Logs</a></li><li><a href="https://www.skills.google/focuses/119745">Arcade Adventure: ACE App Dev VI</a></li><li><a href="https://www.skills.google/focuses/124818">Establish Site to Site Connectivity with HA-VPN using NCC</a></li><li><a href="https://www.skills.google/focuses/124809">Establish Hybrid Network Connectivity with NCC</a></li><li><a href="https://www.skills.google/focuses/164936">Build a Dynamic Website with Antigravity CLI</a></li><li><a href="https://www.skills.google/focuses/164935">Create a PDF Invoice Generator with Antigravity CLI</a></li><li><a href="https://www.skills.google/course_templates/1874">Introduction to the Gemini App</a></li><li><a href="https://www.skills.google/course_templates/1877">AI Infrastructure: Orchestration and Automation</a></li><li><a href="https://www.skills.google/course_templates/1878">Build a Certification Study Guide: AGWA Exam Prep</a></li><li><a href="https://www.skills.google/course_templates/1880">Data Analysis with AI for Nonprofits</a></li><li><a href="https://www.skills.google/focuses/164909">Active Shielding with Model Armor</a></li><li><a href="https://www.skills.google/focuses/164937">Create Conversational Agents with Cortex Framework for SAP Data</a></li><li><a href="https://www.skills.google/focuses/67855">Custom Document Extraction with Document AI Workbench</a></li><li><a href="https://www.skills.google/focuses/3719">Pub/Sub: Qwik Start - Console</a></li><li><a href="https://www.skills.google/focuses/3528">Managed Service for Apache Airflow: Copying BigQuery Tables Across Different Locations</a></li><li><a href="https://www.skills.google/focuses/164944">Explore Data with Gemini in BigQuery</a></li><li><a href="https://www.skills.google/focuses/136018">Securely Load Balance Internet Traffic to Private VMs</a></li><li><a href="https://www.skills.google/course_templates/1889">Protect AI Workloads with Model Armor</a></li><li><a href="https://www.skills.google/course_templates/1884">Build and Secure MCP Services on Cloud Run</a></li><li><a href="https://www.skills.google/course_templates/1885">Wrap Up: Build High-Performance Multi-Agent Systems</a></li><li><a href="https://www.skills.google/course_templates/1887">Wrap Up: Govern and Secure Enterprise Agents</a></li><li class="muted">&hellip; and 30 more added</li></ul><h3>Removed (137)</h3><ul><li class="removed"><a href="https://www.skills.google/course_templates/1410">Data Governance with Dataplex Universal Catalog</a></li><li class="removed"><a href="https://www.skills.google/course_templates/1582">Vibe Coding for Beginners: From Zero to App</a></li><li class="removed"><a href="https://www.skills.google/course_templates/720">Flutter Development</a></li><li class="removed"><a href="https://www.skills.google/course_templates/721">Flutter Essentials</a></li><li class="removed"><a href="https://www.skills.google/focuses/105628">Migrating to Cloud SQL from Amazon RDS for MySQL Using Database Migration Service</a></li><li class="removed"><a href="https://www.skills.google/focuses/136018">Securely Load Balance Internet Traffic to Private VMs</a></li><li class="removed"><a href="https://www.skills.google/focuses/16190">Online Data Migration to BigQuery using Striim</a></li><li class="removed"><a href="https://www.skills.google/focuses/18214">Flutter Startup Namer</a></li><li class="removed"><a href="https://www.skills.google/focuses/18216">Getting started with Flutter Development</a></li><li class="removed"><a href="https://www.skills.google/focuses/18217">Material Components for Flutter Basics</a></li><li class="removed"><a href="https://www.skills.google/focuses/28817">Build a Two Screen Flutter Application</a></li><li class="removed"><a href="https://www.skills.google/focuses/28818">Flutter Qwik Start</a></li><li class="removed"><a href="https://www.skills.google/focuses/28819">Implementing Page Navigation in a Flutter Application</a></li><li class="removed"><a href="https://www.skills.google/focuses/28820">Working with Onscreen Data in a Flutter Application</a></li><li class="removed"><a href="https://www.skills.google/focuses/28825">Introduction to Dart</a></li><li class="removed"><a href="https://www.skills.google/focuses/3528">Managed Service for Apache Airflow: Copying BigQuery Tables Across Different Locations</a></li><li class="removed"><a href="https://www.skills.google/focuses/3719">Pub/Sub: Qwik Start - Console</a></li><li class="removed"><a href="https://www.skills.google/focuses/67855">Custom Document Extraction with Document AI Workbench</a></li><li class="removed"><a href="https://www.skills.google/focuses/80974">Workload Manager Validation for SQL Server</a></li><li class="removed"><a href="https://www.skills.google/course_templates/1206">Essential Google Cloud CLI Tools</a></li><li class="removed"><a href="https://www.skills.google/course_templates/630">Use Machine Learning APIs on Google Cloud</a></li><li class="removed"><a href="https://www.skills.google/course_templates/726">Organize and Govern Data with Knowledge Catalog</a></li><li class="removed"><a href="https://www.skills.google/course_templates/759">Mitigate Threats and Vulnerabilities with Security Command Center</a></li><li class="removed"><a href="https://www.skills.google/course_templates/761">Monitor Environments with Google Cloud Managed Service for Prometheus</a></li><li class="removed"><a href="https://www.skills.google/focuses/105629">Migrating On-premises MySQL Using a Continuous Database Migration Service Job</a></li><li class="muted">&hellip; and 112 more removed</li></ul></div><h2>Catalog trend</h2><div class="chart"><svg viewBox="0 0 900 260" width="100%" role="img"><line x1="40" y1="220" x2="890" y2="220" stroke="#d1d5db"/><text x="34" y="224.0" font-size="10" fill="#6b7280" text-anchor="end">0</text><text x="34" y="118.92881355932204" font-size="10" fill="#6b7280" text-anchor="end">738</text><text x="34" y="14.0" font-size="10" fill="#6b7280" text-anchor="end">1475</text><polyline points="40.0,10.0 252.5,10.0 465.0,10.4 677.5,12.8 890.0,21.7" fill="none" stroke="#6c5898" stroke-width="2"/><circle cx="40.0" cy="10.0" r="3" fill="#6c5898"/><circle cx="252.5" cy="10.0" r="3" fill="#6c5898"/><circle cx="465.0" cy="10.4" r="3" fill="#6c5898"/><circle cx="677.5" cy="12.8" r="3" fill="#6c5898"/><circle cx="890.0" cy="21.7" r="3" fill="#6c5898"/><text x="40.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-31</text><text x="252.5" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-08-31</text><text x="465.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-09-07</text><text x="677.5" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-09-14</text><text x="890.0" y="236" font-size="10" fill="#6b7280" text-anchor="middle">2026-09-21</text></svg><div class="legend"><span><span class="dot" style="background:#6c5898"></span>Google</span></div></div><h2>Catalog</h2><table><tr><th>Source</th><th>Active items</th></tr><tr><td>google-skills-catalog</td><td>1393</td></tr></table>
+<footer>Generated 2026-09-21 18:57 UTC by the compete-monitor pipeline. Regenerate with <code>python -m scraper site</code>.</footer></div>
+</body>
+</html>
