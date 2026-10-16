@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>little photo booth</title>
+  <meta name="description" content="a little photo booth, just for you — take a strip of photos in your browser and develop it with a film filter.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath fill=%27%239b3f32%27 d=%27M12 0c.9 6.3 5.2 10.9 12 12-6.8 1.1-11.1 5.7-12 12-.9-6.3-5.2-10.9-12-12C6.8 10.9 11.1 6.3 12 0z%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1 class="tagline">a little photo booth, just for you</h1>
+    <div class="mode-toggle" role="radiogroup" aria-label="booth mode">
+      <button type="button" class="mode is-active" data-mode="solo" role="radio" aria-checked="true">just me</button>
+      <button type="button" class="mode" data-mode="together" role="radio" aria-checked="false">together ♡</button>
+    </div>
+  </header>
+
+  <main class="floor">
+    <!-- the camera / controls side -->
+    <section class="booth" aria-label="camera">
+      <div class="viewfinder" id="viewfinder">
+        <video id="video" playsinline muted autoplay></video>
+        <div class="vf-empty" id="vfEmpty">
+          <p>step inside the booth</p>
+          <button type="button" class="btn btn-primary" id="cameraBtn"><span>turn on camera</span></button>
+          <p class="vf-error" id="vfError" hidden></p>
+        </div>
+        <div class="vf-turn" id="vfTurn" hidden></div>
+        <div class="vf-count" id="vfCount" aria-live="assertive"></div>
+        <div class="vf-progress" id="vfProgress" hidden></div>
+        <div class="vf-flash" id="vfFlash"></div>
+      </div>
+
+      <div class="thumbs" id="thumbs" aria-label="photos taken"></div>
+
+      <div class="controls">
+        <div class="control">
+          <span class="control-label" id="countLabel">photos</span>
+          <div class="stepper" role="group" aria-labelledby="countLabel">
+            <button type="button" class="step" id="countDown" aria-label="fewer photos">−</button>
+            <output id="countOut">4</output>
+            <button type="button" class="step" id="countUp" aria-label="more photos">+</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <span class="control-label" id="filterLabel">filter</span>
+          <div class="chips" id="filters" role="radiogroup" aria-labelledby="filterLabel">
+            <button type="button" class="chip is-active" data-filter="vintage" role="radio" aria-checked="true">vintage</button>
+            <button type="button" class="chip" data-filter="noir" role="radio" aria-checked="false">noir</button>
+            <button type="button" class="chip" data-filter="warm" role="radio" aria-checked="false">warm film</button>
+            <button type="button" class="chip" data-filter="natural" role="radio" aria-checked="false">natural</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="shootBtn" disabled><span>take photos</span></button>
+          <button type="button" class="btn btn-ghost" id="downloadBtn" hidden>download strip</button>
+          <button type="button" class="btn btn-ghost" id="againBtn" hidden>take again</button>
+        </div>
+        <p class="hint" id="hint">turn on your camera to begin</p>
+      </div>
+    </section>
+
+    <!-- the machine the strip prints out of -->
+    <section class="machine-wrap" aria-label="photo strip">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="machine" id="machine">
+        <div class="sign"><span>PHOTOS<br>DELIVERED<br>HERE</span></div>
+        <div class="case">
+          <div class="slot" aria-hidden="true">
+            <i class="screw"></i><span class="slot-mouth"></span><i class="screw"></i>
+          </div>
+          <div class="tray" id="tray">
+            <p class="tray-empty" id="trayEmpty">your strip will<br>print here</p>
+            <img class="strip" id="strip" alt="your photo strip" hidden>
+          </div>
+          <div class="stars" id="stars" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">photos never leave your device · nothing is uploaded</footer>
+
+  <canvas id="work" hidden></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
